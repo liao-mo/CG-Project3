@@ -53,6 +53,7 @@ class Pnt3f {
 		Pnt3f operator * (const Pnt3f&) const;	/* cross product */
 		Pnt3f operator * (const float)	const;  /* scale by scalar */
 		Pnt3f operator + (const Pnt3f&) const;	/* create a temp */
+		Pnt3f operator - (const Pnt3f&) const;	/* create a temp */
 
 		// make sure that we're unit length - vertical in the error case (0 length)
 		void normalize();
@@ -113,7 +114,13 @@ inline Pnt3f Pnt3f::
 operator + (const Pnt3f& p) const 
 //=============================================================================
 {
-	return Pnt3f(x+p.x, y+p.y, z+p.z);
+	return Pnt3f(x + p.x, y + p.y, z + p.z);
+};
+
+inline Pnt3f Pnt3f::operator - (const Pnt3f& p) const
+//=============================================================================
+{
+	return Pnt3f(x - p.x, y - p.y, z - p.z);
 };
 
 //*****************************************************************************

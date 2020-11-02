@@ -51,6 +51,7 @@ class CTrack;
 // this uses the old ArcBall Code
 #include "Utilities/ArcBallCam.H"
 
+
 class TrainView : public Fl_Gl_Window
 {
 	public:
@@ -65,6 +66,8 @@ class TrainView : public Fl_Gl_Window
 		// it has to be encapsulated, since we draw differently if
 		// we're drawing shadows (no colors, for example)
 		void drawStuff(bool doingShadows=false);
+
+		
 
 		// setup the projection - assuming that the projection stack has been
 		// cleared for you
@@ -83,3 +86,4 @@ class TrainView : public Fl_Gl_Window
 		TrainWindow*	tw;				// The parent of this display window
 		CTrack*			m_pTrack;		// The track of the entire scene
 };
+

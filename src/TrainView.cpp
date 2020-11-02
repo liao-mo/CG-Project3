@@ -39,6 +39,8 @@
 #include "Utilities/3DUtils.H"
 
 #include "Matrices.h"
+#include <vector>
+
 
 
 #ifdef EXAMPLE_SOLUTION
@@ -332,7 +334,6 @@ setProjection()
 	
 	else {
 		
-
 		int p1 = m_pTrack->trainU / 1;
 		int p2 = (p1 + 1) % m_pTrack->points.size();
 
@@ -361,6 +362,59 @@ setProjection()
 #endif
 	}
 }
+
+
+
+//find the qt with different spline method and given points, parameter t
+Pnt3f find_qtt(int spline_type, vector<Pnt3f> points, float t) {
+	Pnt3f qt;
+
+	//geometric constraints matrix
+	Matrix4 G(
+		points[0].x, points[0].y, points[0].z, 1,
+		points[1].x, points[1].y, points[1].z, 1,
+		points[2].x, points[2].y, points[2].z, 1,
+		points[3].x, points[3].y, points[3].z, 1);
+
+	//Cardinal Cubic matrix
+	Matrix4 M1(-1, 3, -3, 1, 2, -5, 4, -1, -1, 0, 1, 0, 0, 2, 0, 0);
+	M1 = (1.0 / 2.0) * M1;
+
+	//Cubic B spline matrix
+	Matrix4 M2(-1,3,-3,1,3,-6,3,0,-3,0,3,0,1,4,1,0);
+	M2 = (1.0 / 6.0) * M2;
+
+	//parameter matrix
+	Vector4 T(t * t * t, t * t, t, 1);
+
+	Vector4 temp_qt;
+
+	if (spline_type == 1) {
+		//linear
+		qt = (1 - t) * points[1] + t * points[2];
+	}
+	else if (spline_type == 2) {
+		//Cardinal Cubic
+		temp_qt = G * M1 * T;
+		qt.x = temp_qt.x;
+		qt.y = temp_qt.y;
+		qt.z = temp_qt.z;
+	}
+	else if (spline_type == 3) {
+		//Cubic B spline
+		temp_qt = G * M2 * T;
+		qt.x = temp_qt.x;
+		qt.y = temp_qt.y;
+		qt.z = temp_qt.z;
+	}
+
+
+	
+
+
+	return qt;
+}
+
 
 //************************************************************************
 //
@@ -412,14 +466,14 @@ void TrainView::drawStuff(bool doingShadows)
 		Pnt3f cp_orient_p1 = m_pTrack->points[i].orient;
 		Pnt3f cp_orient_p2 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
 
+		vector<Pnt3f> points = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
 
 		float percent = 1.0f / DIVIDE_LINE;
 		float t = 0;
-		Pnt3f qt = (1 - t) * cp_pos_p1 + t * cp_pos_p2;
 
-		Vector4 G = {};
-		Matrix4 M = {};
-
+		
+		int spline_type = tw->splineBrowser->value();
+		Pnt3f qt = find_qtt(spline_type, points, t);
 
 		Pnt3f qt0;
 		Pnt3f qt1;
@@ -430,40 +484,27 @@ void TrainView::drawStuff(bool doingShadows)
 		for (size_t j = 0; j < DIVIDE_LINE; j++) {
 			qt0 = qt;
 
-			int spline_type = tw->splineBrowser->value();
 			switch (spline_type)
 			{
-				//linear
 			case 1:
+				//linear
 				orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
 				break;
-				//Cardinal Cubic
 			case 2:
+				//Cardinal Cubic
+				orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
 				break;
-				//Cubic B spline
 			case 3:
-
+				//Cubic B spline
+				orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
 				break;
 			default:
 				break;
 			}
 
 			t += percent;
-			switch (spline_type) {
-				//linear
-			case 1:
-				qt = (1 - t) * cp_pos_p1 + t * cp_pos_p2;
-				break;
-				//Cardinal Cubic
-			case 2:
-				break;
-				//Cubic B spline
-			case 3:
 
-				break;
-			default:
-				break;
-			}
+			qt = find_qtt(spline_type, points, t);
 
 
 			qt1 = qt;

@@ -1,6 +1,8 @@
-# CG-Project3
+# CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
-圖學導論project 3 Trains and Roller Coasters
+## 2020/11/2
+
+現在train可以沿著軌道跑
 
 ## 2020/11/2
 

@@ -533,12 +533,38 @@ void TrainView::drawStuff(bool doingShadows)
 	//	call your own train drawing code
 	//####################################################################
 	if (!tw->trainCam->value()) {
+		Pnt3f qt;
 		int p1 = m_pTrack->trainU / 1;
 		int p2 = (p1 + 1) % m_pTrack->points.size();
+		int p3 = (p1 + 2) % m_pTrack->points.size();
+		int p0;
+		if (p1 == 0) {
+			p0 = m_pTrack->points.size() - 1;
+		}
+		else {
+			p0 = p1 - 1;
+		}
 
 		float t = m_pTrack->trainU - p1;
+		vector<Pnt3f> points = { 
+			m_pTrack->points[p0].pos, 
+			m_pTrack->points[p1].pos, 
+			m_pTrack->points[p2].pos,
+			m_pTrack->points[p3].pos 
+		};
 
-		Pnt3f qt = (1 - t) * m_pTrack->points[p1].pos + t * m_pTrack->points[p2].pos;
+		if (tw->splineBrowser->value() == 1) {
+			qt = (1 - t) * m_pTrack->points[p1].pos + t * m_pTrack->points[p2].pos;
+		}
+		else if (tw->splineBrowser->value() == 2) {
+			qt = find_qtt(2, points, t);
+		}
+		else if (tw->splineBrowser->value() == 3) {
+			qt = find_qtt(3, points, t);
+		}
+
+		
+		
 
 		glBegin(GL_QUADS);
 		glColor3f(100, 200, 150);

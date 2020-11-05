@@ -50,6 +50,7 @@ class CTrack;
 
 // this uses the old ArcBall Code
 #include "Utilities/ArcBallCam.H"
+#include "TrainModel.h"
 
 
 class TrainView : public Fl_Gl_Window
@@ -67,6 +68,8 @@ class TrainView : public Fl_Gl_Window
 		// we're drawing shadows (no colors, for example)
 		void drawStuff(bool doingShadows=false);
 
+		//the function that draws the train
+		void draw_train();
 		
 
 		// setup the projection - assuming that the projection stack has been
@@ -79,11 +82,14 @@ class TrainView : public Fl_Gl_Window
 		// pick a point (for when the mouse goes down)
 		void doPick();
 
+
+
 	public:
 		ArcBallCam		arcball;			// keep an ArcBall for the UI
 		int				selectedCube;  // simple - just remember which cube is selected
 
 		TrainWindow*	tw;				// The parent of this display window
 		CTrack*			m_pTrack;		// The track of the entire scene
+		TrainModel my_train;			//my train model
 };
 

@@ -32,16 +32,20 @@
 //#include "GL/gl.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "GL/glu.h"
 
 #include "TrainView.H"
 #include "TrainWindow.H"
 #include "Utilities/3DUtils.H"
 
-#include "Matrices.h"
+#include "Utilities/Matrices.h"
+#include "Utilities/objloader.hpp"
 #include <vector>
+#include "iostream"
 
-
+using namespace std;
 
 #ifdef EXAMPLE_SOLUTION
 #	include "TrainExample/TrainExample.H"
@@ -49,18 +53,74 @@
 
 #define DIVIDE_LINE 100
 
+//my funtions
+
+//find the qt with different spline method and given points, parameter t
+Pnt3f find_qt(int spline_type, vector<Pnt3f> points, float t) {
+	Pnt3f qt;
+
+	//geometric constraints matrix
+	Matrix4 G(
+		points[0].x, points[0].y, points[0].z, 1,
+		points[1].x, points[1].y, points[1].z, 1,
+		points[2].x, points[2].y, points[2].z, 1,
+		points[3].x, points[3].y, points[3].z, 1);
+
+	//Cardinal Cubic matrix
+	Matrix4 M1(-1, 3, -3, 1, 2, -5, 4, -1, -1, 0, 1, 0, 0, 2, 0, 0);
+	M1 = (1.0 / 2.0) * M1;
+
+	//Cubic B spline matrix
+	Matrix4 M2(-1, 3, -3, 1, 3, -6, 3, 0, -3, 0, 3, 0, 1, 4, 1, 0);
+	M2 = (1.0 / 6.0) * M2;
+
+	//parameter matrix
+	Vector4 T(t * t * t, t * t, t, 1);
+
+	Vector4 temp_qt;
+
+	if (spline_type == 1) {
+		//linear
+		qt = (1 - t) * points[1] + t * points[2];
+	}
+	else if (spline_type == 2) {
+		//Cardinal Cubic
+		temp_qt = G * M1 * T;
+		qt.x = temp_qt.x;
+		qt.y = temp_qt.y;
+		qt.z = temp_qt.z;
+	}
+	else if (spline_type == 3) {
+		//Cubic B spline
+		temp_qt = G * M2 * T;
+		qt.x = temp_qt.x;
+		qt.y = temp_qt.y;
+		qt.z = temp_qt.z;
+	}
+
+
+
+
+
+	return qt;
+}
+
+
+
 //************************************************************************
 //
 // * Constructor to set up the GL window
 //========================================================================
 TrainView::
 TrainView(int x, int y, int w, int h, const char* l)
-	: Fl_Gl_Window(x, y, w, h, l)
+	: Fl_Gl_Window(x, y, w, h, l), my_train("cube.obj")
 	//========================================================================
 {
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 
 	resetArcball();
+
+
 }
 
 //************************************************************************
@@ -335,17 +395,36 @@ setProjection()
 	else {
 		
 		int p1 = m_pTrack->trainU / 1;
-		int p2 = (p1 + 1) % m_pTrack->points.size();
 
-		float t = m_pTrack->trainU - p1;
+		Pnt3f cp_pos_p0;
+		if (p1 == 0) {
+			cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
+		}
+		else {
+			cp_pos_p0 = m_pTrack->points[(p1 - 1)].pos;
+		}
+		Pnt3f cp_pos_p1 = m_pTrack->points[p1].pos;
+		Pnt3f cp_pos_p2 = m_pTrack->points[(p1 + 1) % m_pTrack->points.size()].pos;
+		Pnt3f cp_pos_p3 = m_pTrack->points[(p1 + 2) % m_pTrack->points.size()].pos;
+		vector<Pnt3f> points = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
+		float t1 = m_pTrack->trainU - p1;
+		float t2 = t1 + 0.01;
+		if (t2 >= 1) {
+			t2 = 1;
+		}
 
-		Pnt3f qt = (1 - t) * m_pTrack->points[p1].pos + t * m_pTrack->points[p2].pos;
+		cout << "t1: " << t1 << " t2: " << t2 << endl;
 
-		Pnt3f foward = m_pTrack->points[p2].pos - m_pTrack->points[p1].pos;
+		Pnt3f qt0 = find_qt(tw->splineBrowser->value(), points, t1);
+		Pnt3f qt1 = find_qt(tw->splineBrowser->value(), points, t2);
+
+		Pnt3f foward = qt1 - qt0;
 
 		Pnt3f cp_orient_p1 = m_pTrack->points[p1].orient;
-		Pnt3f cp_orient_p2 = m_pTrack->points[p2].orient;
-		Pnt3f orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
+		Pnt3f cp_orient_p2 = m_pTrack->points[(p1 + 1) % m_pTrack->points.size()].orient;
+
+		Pnt3f orient_t1 = (1 - t1) * cp_orient_p1 + t1 * cp_orient_p2;
+		Pnt3f orient_t2 = (1 - t2) * cp_orient_p1 + t2 * cp_orient_p2;
 		
 		
 		glMatrixMode(GL_PROJECTION);
@@ -353,7 +432,17 @@ setProjection()
 		gluPerspective(120, 1, 1, 200); 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		gluLookAt(qt.x + orient_t.x * 3, qt.y + orient_t.y * 3, qt.z + orient_t.z * 3, qt.x+foward.x, qt.y+foward.y, qt.z+foward.z , orient_t.x, orient_t.y, orient_t.z);
+		gluLookAt(
+			qt0.x + orient_t1.x * 10,
+			qt0.y + orient_t1.y * 10,
+			qt0.z + orient_t1.z * 10,
+			qt1.x + orient_t2.x * 10,
+			qt1.y + orient_t2.y * 10,
+			qt1.z + orient_t2.z * 10,
+			orient_t1.x, 
+			orient_t1.y, 
+			orient_t1.z
+		);
 
 
 
@@ -365,55 +454,7 @@ setProjection()
 
 
 
-//find the qt with different spline method and given points, parameter t
-Pnt3f find_qtt(int spline_type, vector<Pnt3f> points, float t) {
-	Pnt3f qt;
 
-	//geometric constraints matrix
-	Matrix4 G(
-		points[0].x, points[0].y, points[0].z, 1,
-		points[1].x, points[1].y, points[1].z, 1,
-		points[2].x, points[2].y, points[2].z, 1,
-		points[3].x, points[3].y, points[3].z, 1);
-
-	//Cardinal Cubic matrix
-	Matrix4 M1(-1, 3, -3, 1, 2, -5, 4, -1, -1, 0, 1, 0, 0, 2, 0, 0);
-	M1 = (1.0 / 2.0) * M1;
-
-	//Cubic B spline matrix
-	Matrix4 M2(-1,3,-3,1,3,-6,3,0,-3,0,3,0,1,4,1,0);
-	M2 = (1.0 / 6.0) * M2;
-
-	//parameter matrix
-	Vector4 T(t * t * t, t * t, t, 1);
-
-	Vector4 temp_qt;
-
-	if (spline_type == 1) {
-		//linear
-		qt = (1 - t) * points[1] + t * points[2];
-	}
-	else if (spline_type == 2) {
-		//Cardinal Cubic
-		temp_qt = G * M1 * T;
-		qt.x = temp_qt.x;
-		qt.y = temp_qt.y;
-		qt.z = temp_qt.z;
-	}
-	else if (spline_type == 3) {
-		//Cubic B spline
-		temp_qt = G * M2 * T;
-		qt.x = temp_qt.x;
-		qt.y = temp_qt.y;
-		qt.z = temp_qt.z;
-	}
-
-
-	
-
-
-	return qt;
-}
 
 
 //************************************************************************
@@ -473,7 +514,7 @@ void TrainView::drawStuff(bool doingShadows)
 
 		
 		int spline_type = tw->splineBrowser->value();
-		Pnt3f qt = find_qtt(spline_type, points, t);
+		Pnt3f qt = find_qt(spline_type, points, t);
 
 		Pnt3f qt0;
 		Pnt3f qt1;
@@ -482,42 +523,70 @@ void TrainView::drawStuff(bool doingShadows)
 		
 
 		for (size_t j = 0; j < DIVIDE_LINE; j++) {
-			qt0 = qt;
+			qt0 = find_qt(spline_type, points, t-0.001);;
 
-			switch (spline_type)
-			{
-			case 1:
-				//linear
-				orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
-				break;
-			case 2:
-				//Cardinal Cubic
-				orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
-				break;
-			case 3:
-				//Cubic B spline
-				orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
-				break;
-			default:
-				break;
-			}
+			//linear interpolation orient
+			orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
 
 			t += percent;
 
-			qt = find_qtt(spline_type, points, t);
-
-
+			qt = find_qt(spline_type, points, t);
 			qt1 = qt;
 
-			glLineWidth(3);
-			glBegin(GL_LINES);
+			glm::vec3 qt0_vec(qt0.x, qt0.y, qt0.z);
+			glm::vec3 qt1_vec(qt1.x, qt1.y, qt1.z);
+			glm::vec3 forward_vec(qt1.x - qt0.x, qt1.y - qt0.y, qt1.z - qt0.z);
+			glm::vec3 orient_vec(orient_t.x, orient_t.y, orient_t.z);
+			glm::vec3 offset_vec1 = glm::cross(forward_vec, orient_vec);
+			offset_vec1 = glm::normalize(offset_vec1);
+			offset_vec1 *= 1.5* DIVIDE_LINE / 100;
+			glm::vec3 offset_vec2 =2.0f * offset_vec1;
+
+
+			glm::vec3 left_track0 = qt0_vec + offset_vec1;
+			glm::vec3 left_track1 = qt1_vec + offset_vec1;
+			glm::vec3 left_track2 = qt1_vec + offset_vec2;
+			glm::vec3 left_track3 = qt0_vec + offset_vec2;
+			glm::vec3 right_track0 = qt0_vec - offset_vec1;
+			glm::vec3 right_track1 = qt1_vec - offset_vec1;
+			glm::vec3 right_track2 = qt1_vec - offset_vec2;
+			glm::vec3 right_track3 = qt0_vec - offset_vec2;
+
+			glLineWidth(5);
+
+			//single track
+			//glBegin(GL_LINES);
+			//if (!doingShadows) {
+			//	glColor3ub(32, 32, 64);
+			//}
+			//glVertex3f(qt0.x, qt0.y, qt0.z);
+			//glVertex3f(qt1.x, qt1.y, qt1.z);
+			//glEnd();
+
+			//left track
+			glBegin(GL_POLYGON);
 			if (!doingShadows) {
 				glColor3ub(32, 32, 64);
 			}
-			glVertex3f(qt0.x, qt0.y, qt0.z);
-			glVertex3f(qt1.x, qt1.y, qt1.z);
-
+			glVertex3f(left_track0.x, left_track0.y, left_track0.z);
+			glVertex3f(left_track1.x, left_track1.y, left_track1.z);
+			glVertex3f(left_track2.x, left_track2.y, left_track2.z);
+			glVertex3f(left_track3.x, left_track3.y, left_track3.z);
 			glEnd();
+
+			//right track
+			glBegin(GL_POLYGON);
+			if (!doingShadows) {
+				glColor3ub(32, 32, 64);
+			}
+			glVertex3f(right_track0.x, right_track0.y, right_track0.z);
+			glVertex3f(right_track1.x, right_track1.y, right_track1.z);
+			glVertex3f(right_track2.x, right_track2.y, right_track2.z);
+			glVertex3f(right_track3.x, right_track3.y, right_track3.z);
+			glEnd();
+
+
+
 			glLineWidth(1);
 		}
 	}
@@ -532,52 +601,7 @@ void TrainView::drawStuff(bool doingShadows)
 	// TODO: 
 	//	call your own train drawing code
 	//####################################################################
-	if (!tw->trainCam->value()) {
-		Pnt3f qt;
-		int p1 = m_pTrack->trainU / 1;
-		int p2 = (p1 + 1) % m_pTrack->points.size();
-		int p3 = (p1 + 2) % m_pTrack->points.size();
-		int p0;
-		if (p1 == 0) {
-			p0 = m_pTrack->points.size() - 1;
-		}
-		else {
-			p0 = p1 - 1;
-		}
-
-		float t = m_pTrack->trainU - p1;
-		vector<Pnt3f> points = { 
-			m_pTrack->points[p0].pos, 
-			m_pTrack->points[p1].pos, 
-			m_pTrack->points[p2].pos,
-			m_pTrack->points[p3].pos 
-		};
-
-		if (tw->splineBrowser->value() == 1) {
-			qt = (1 - t) * m_pTrack->points[p1].pos + t * m_pTrack->points[p2].pos;
-		}
-		else if (tw->splineBrowser->value() == 2) {
-			qt = find_qtt(2, points, t);
-		}
-		else if (tw->splineBrowser->value() == 3) {
-			qt = find_qtt(3, points, t);
-		}
-
-		
-		
-
-		glBegin(GL_QUADS);
-		glColor3f(100, 200, 150);
-		glTexCoord2f(0.0f, 0.0f);
-		glVertex3f(qt.x - 5, qt.y - 5, qt.z - 5);
-		glTexCoord2f(1.0f, 0.0f);
-		glVertex3f(qt.x + 5, qt.y - 5, qt.z - 5);
-		glTexCoord2f(1.0f, 1.0f);
-		glVertex3f(qt.x + 5, qt.y + 5, qt.z - 5);
-		glTexCoord2f(0.0f, 1.0f);
-		glVertex3f(qt.x - 5, qt.y + 5, qt.z - 5);
-		glEnd();
-	}
+	draw_train();
 	
 
 
@@ -652,4 +676,71 @@ doPick()
 		selectedCube = -1;
 
 	printf("Selected Cube %d\n", selectedCube);
+}
+
+void TrainView::draw_train() {
+	if (!tw->trainCam->value()) {
+		Pnt3f qt;
+		int p1 = m_pTrack->trainU / 1;
+		int p2 = (p1 + 1) % m_pTrack->points.size();
+		int p3 = (p1 + 2) % m_pTrack->points.size();
+		int p0;
+		if (p1 == 0) {
+			p0 = m_pTrack->points.size() - 1;
+		}
+		else {
+			p0 = p1 - 1;
+		}
+
+		float t = m_pTrack->trainU - p1;
+		vector<Pnt3f> points = {
+			m_pTrack->points[p0].pos,
+			m_pTrack->points[p1].pos,
+			m_pTrack->points[p2].pos,
+			m_pTrack->points[p3].pos
+		};
+
+		if (tw->splineBrowser->value() == 1) {
+			qt = (1 - t) * m_pTrack->points[p1].pos + t * m_pTrack->points[p2].pos;
+		}
+		else if (tw->splineBrowser->value() == 2) {
+			qt = find_qt(2, points, t);
+		}
+		else if (tw->splineBrowser->value() == 3) {
+			qt = find_qt(3, points, t);
+		}
+
+
+		for (int i = 0; i < my_train.vertices.size(); ++i) {
+			glBegin(GL_LINE);
+			glColor3f(0.55, 1.0, 0.0);
+			glm::vec4 vec(my_train.vertices[i].x, my_train.vertices[i].y, my_train.vertices[i].z, 1.0f);
+			glm::mat4 trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, glm::vec3(qt.x, qt.y, qt.z));
+			
+
+			glm::mat4 scale = glm::mat4(1.0f);
+			scale = glm::scale(scale, glm::vec3(10,10,10));
+
+			vec = trans * scale * vec;
+
+			glVertex3f(vec.x, vec.y, vec.z);
+			cout << vec.x << " " << vec.y << " " << vec.z << endl;
+			glEnd();
+
+		}
+
+
+		glBegin(GL_QUADS);
+		glColor3f(1.0, 1.0, 0.0);
+		//glTexCoord2f(0.0f, 0.0f);
+		//glVertex3f(qt.x - 5, qt.y - 5, qt.z - 5);
+		//glTexCoord2f(1.0f, 0.0f);
+		//glVertex3f(qt.x + 5, qt.y - 5, qt.z - 5);
+		//glTexCoord2f(1.0f, 1.0f);
+		//glVertex3f(qt.x + 5, qt.y + 5, qt.z - 5);
+		//glTexCoord2f(0.0f, 1.0f);
+		//glVertex3f(qt.x - 5, qt.y + 5, qt.z - 5);
+		glEnd();
+	}
 }

@@ -1,5 +1,11 @@
 # CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
+## 2020/11/6
+
+解決第一人稱大幅度跳動問題，只剩下輕微抖動，可暫時忽略
+火車模型已經用learn openGL的loading model範例程式跑得出來
+只是要移植那些東西包括shader，會有點複雜
+
 ## 2020/11/5
 
 目前問題

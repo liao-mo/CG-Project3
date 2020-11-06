@@ -34,8 +34,11 @@
 #include "TrainWindow.H"
 #include "TrainView.H"
 #include "CallBacks.H"
+#include "iostream"
 
+#define DEBUG
 
+using namespace std;
 
 //************************************************************************
 //
@@ -198,7 +201,12 @@ advanceTrain(float dir)
 	//#####################################################################
 	// TODO: make this work for your train
 	//#####################################################################
-	trainView->m_pTrack->trainU += 0.01;
+	float speed_val = dir * this->speed->value() / 100.0;
+#ifdef DEBUG
+	//speed_val = 0.001;
+#endif // DEBUG
+
+	trainView->m_pTrack->trainU += speed_val;
 	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size()) {
 		trainView->m_pTrack->trainU -= trainView->m_pTrack->points.size();
 	}

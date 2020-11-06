@@ -20,8 +20,6 @@
 
 現在train可以沿著軌道跑
 
-## 2020/11/2
-
 開始動工
 完成linear、cardinal、B spline三種track的產生
 用switch case在spline type上會有奇怪的問題發生

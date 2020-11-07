@@ -116,7 +116,7 @@ void forwCB(Fl_Widget*, TrainWindow* tw)
 void backCB(Fl_Widget*, TrainWindow* tw)
 //===========================================================================
 {
-	tw->advanceTrain(-2);
+	tw->advanceTrain(-1);
 	tw->damageMe();
 }
 

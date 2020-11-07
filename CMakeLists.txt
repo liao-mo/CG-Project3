@@ -26,6 +26,7 @@ add_executable(RollerCoasters
     ${SRC_DIR}TrainWindow.cpp
     ${SRC_DIR}TrainModel.h
     ${SRC_DIR}TrainModel.cpp
+    ${SRC_DIR}My_functions.H
     ${INCLUDE_DIR}glad4.6/src/glad.c)
 
 add_library(Utilities 
@@ -40,6 +41,8 @@ add_library(Utilities
     ${SRC_DIR}Utilities/Matrices.h
     ${SRC_DIR}Utilities/Matrices.cpp
     ${SRC_DIR}Utilities/Vectors.h)
+
+
 
 target_link_libraries(RollerCoasters 
     debug ${LIB_DIR}Debug/fltk_formsd.lib      optimized ${LIB_DIR}Release/fltk_forms.lib

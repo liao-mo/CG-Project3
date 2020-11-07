@@ -1,5 +1,10 @@
 # CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
+## 2020/11/7
+
+利用glm的quaternion讓火車頭可以朝著移動的方向
+shader研究中，需要改動大量程式碼
+
 ## 2020/11/6
 
 解決第一人稱大幅度跳動問題，只剩下輕微抖動，可暫時忽略

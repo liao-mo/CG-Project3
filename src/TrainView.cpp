@@ -31,19 +31,28 @@
 #include <windows.h>
 //#include "GL/gl.h"
 #include <glad/glad.h>
+
+// Include GLM
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/norm.hpp>
+
 #include "GL/glu.h"
 
 #include "TrainView.H"
 #include "TrainWindow.H"
 #include "Utilities/3DUtils.H"
 
+
 #include "Utilities/Matrices.h"
 #include "Utilities/objloader.hpp"
+#include "My_functions.H"
 #include <vector>
-#include "iostream"
+
 
 using namespace std;
 
@@ -54,56 +63,23 @@ using namespace std;
 #define DIVIDE_LINE 100
 #define DEBUG
 
-//my funtions
 
-//find the qt with different spline method and given points, parameter t
-Pnt3f find_qt(int spline_type, vector<Pnt3f> points, float t) {
-	Pnt3f qt;
-
-	//geometric constraints matrix
-	Matrix4 G(
-		points[0].x, points[0].y, points[0].z, 1,
-		points[1].x, points[1].y, points[1].z, 1,
-		points[2].x, points[2].y, points[2].z, 1,
-		points[3].x, points[3].y, points[3].z, 1);
-
-	//Cardinal Cubic matrix
-	Matrix4 M1(-1, 3, -3, 1, 2, -5, 4, -1, -1, 0, 1, 0, 0, 2, 0, 0);
-	M1 = (1.0 / 2.0) * M1;
-
-	//Cubic B spline matrix
-	Matrix4 M2(-1, 3, -3, 1, 3, -6, 3, 0, -3, 0, 3, 0, 1, 4, 1, 0);
-	M2 = (1.0 / 6.0) * M2;
-
-	//parameter matrix
-	Vector4 T(t * t * t, t * t, t, 1);
-
-	Vector4 temp_qt;
-
-	if (spline_type == 1) {
-		//linear
-		qt = (1 - t) * points[1] + t * points[2];
+//find 4 control point around current point
+std::vector<Pnt3f> TrainView::find_Cpoints(int currentPoint) {
+	Pnt3f cp_pos_p0;
+	if (currentPoint == 0) {
+		cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
 	}
-	else if (spline_type == 2) {
-		//Cardinal Cubic
-		temp_qt = G * M1 * T;
-		qt.x = temp_qt.x;
-		qt.y = temp_qt.y;
-		qt.z = temp_qt.z;
+	else {
+		cp_pos_p0 = m_pTrack->points[(currentPoint - 1)].pos;
 	}
-	else if (spline_type == 3) {
-		//Cubic B spline
-		temp_qt = G * M2 * T;
-		qt.x = temp_qt.x;
-		qt.y = temp_qt.y;
-		qt.z = temp_qt.z;
-	}
+	Pnt3f cp_pos_p1 = m_pTrack->points[currentPoint].pos;
+	Pnt3f cp_pos_p2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].pos;
+	Pnt3f cp_pos_p3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].pos;
 
+	std::vector<Pnt3f> output = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
+	return output;
 
-
-
-
-	return qt;
 }
 
 
@@ -114,7 +90,7 @@ Pnt3f find_qt(int spline_type, vector<Pnt3f> points, float t) {
 //========================================================================
 TrainView::
 TrainView(int x, int y, int w, int h, const char* l)
-	: Fl_Gl_Window(x, y, w, h, l), my_train("cube.obj")
+	: Fl_Gl_Window(x, y, w, h, l), my_train("./TrackFiles/cube.obj")
 	//========================================================================
 {
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
@@ -253,6 +229,88 @@ void TrainView::draw()
 	if (gladLoadGL())
 	{
 		//initiailize VAO, VBO, Shader...
+		const char* vertexShaderSource = "#version 330 core\n"
+			"layout (location = 0) in vec3 aPos;\n"
+			"void main()\n"
+			"{\n"
+			"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+			"}\0";
+
+		const char* fragmentShaderSource = "#version 330 core\n"
+			"out vec4 FragColor;\n"
+			"void main()\n"
+			"{\n"
+			"   FragColor = vec4(0.317, 0.941, 0.490, 1.0);\n"
+			"}\0";
+
+		unsigned int vertexShader;
+		vertexShader = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+		glCompileShader(vertexShader);
+		int  success;
+		char infoLog[512];
+		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+			std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
+		}
+
+		unsigned int fragmentShader;
+		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+		glCompileShader(fragmentShader);
+		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+		if (!success)
+		{
+			glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+			std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
+		}
+
+		
+		shaderProgram = glCreateProgram();
+		glAttachShader(shaderProgram, vertexShader);
+		glAttachShader(shaderProgram, fragmentShader);
+		glLinkProgram(shaderProgram);
+		glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+		if (!success) {
+			glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+			std::cout << "ERROR::SHADER::LINK_FAILED\n" << infoLog << std::endl;
+		}
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+
+
+		float vertices[] = {
+		0.5f,  0.5f, 0.0f,  // top right
+		0.5f, -0.5f, 0.0f,  // bottom right
+		-0.5f, -0.5f, 0.0f,  // bottom left
+		-0.5f,  0.5f, 0.0f   // top left 
+		};
+
+		unsigned int indices[] = {  // note that we start from 0!
+		0, 1, 3,  // first Triangle
+		1, 2, 3   // second Triangle
+		};
+
+		glGenVertexArrays(1, &VAO);
+		glBindVertexArray(VAO);
+
+		glGenBuffers(1, &VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		glGenBuffers(1, &EBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(0);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
 	}
 	else
 		throw std::runtime_error("Could not initialize GLAD!");
@@ -395,43 +453,30 @@ setProjection()
 	
 	else {
 		
-		int p1 = m_pTrack->trainU / 1;
+		int Cp = m_pTrack->trainU / 1;
 
-		Pnt3f cp_pos_p0;
-		if (p1 == 0) {
-			cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
-		}
-		else {
-			cp_pos_p0 = m_pTrack->points[(p1 - 1)].pos;
-		}
-		Pnt3f cp_pos_p1 = m_pTrack->points[p1].pos;
-		Pnt3f cp_pos_p2 = m_pTrack->points[(p1 + 1) % m_pTrack->points.size()].pos;
-		Pnt3f cp_pos_p3 = m_pTrack->points[(p1 + 2) % m_pTrack->points.size()].pos;
-		vector<Pnt3f> points = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
-		float t0 = m_pTrack->trainU - p1;
+		vector<Pnt3f> points = find_Cpoints(Cp);
+
+		float t0 = m_pTrack->trainU - Cp;
 		float t1 = t0 + 0.01;
 		if (t1 >= 1) {
 			t1 = 1;
 		}
-		
+
+		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
 
-		
-
-		Pnt3f qt0 = find_qt(tw->splineBrowser->value(), points, t0);
-		Pnt3f qt1 = find_qt(tw->splineBrowser->value(), points, t1);
-
-		glm::vec3 qt0_v(qt0.x, qt0.y, qt0.z);
-		glm::vec3 qt1_v(qt1.x, qt1.y, qt1.z);
-		glm::vec3 foward = qt1_v - qt0_v;
-		foward = glm::normalize(foward);
+		glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
+		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
+		glm::vec3 forward = qt1_v - qt0_v;
+		forward = glm::normalize(forward);
 
 
-		Pnt3f cp_orient_p0 = m_pTrack->points[p1].orient;
-		Pnt3f cp_orient_p1 = m_pTrack->points[(p1 + 1) % m_pTrack->points.size()].orient;
+		Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
+		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
 
-		Pnt3f orient_t0 = (1 - t0) * cp_orient_p0 + t0 * cp_orient_p1;
-		Pnt3f orient_t1 = (1 - t1) * cp_orient_p0 + t1 * cp_orient_p1;
+		Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+		Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
 
 		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
 		orient_t0_v = glm::normalize(orient_t0_v);
@@ -441,11 +486,11 @@ setProjection()
 #ifdef DEBUG
 		cout << "----------------------------------" << endl;
 		cout << "t0: " << t0 << " t1: " << t1 << endl;
-		cout << "qt0: " << qt0.x << " " << qt0.y << " " << qt0.z << endl;
-		cout << "qt1: " << qt1.x << " " << qt1.y << " " << qt1.z << endl;
+		cout << "qts[0]: " << qts[0].x << " " << qts[0].y << " " << qts[0].z << endl;
+		cout << "qts[1]: " << qts[1].x << " " << qts[1].y << " " << qts[1].z << endl;
 		cout << "orient1: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
 		cout << "orient2: " << orient_t1_v.x << " " << orient_t1_v.y << " " << orient_t1_v.z << endl;
-		cout << "foward: " << foward.x << " " << foward.y << " " << foward.z << endl;
+		cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
 		
 #endif // DEBUG
 		
@@ -458,9 +503,9 @@ setProjection()
 			qt0_v.x + orient_t0_v.x * 7,
 			qt0_v.y + orient_t0_v.y * 7,
 			qt0_v.z + orient_t0_v.z * 7,
-			qt0_v.x + foward.x + orient_t1_v.x * 7,
-			qt0_v.y + foward.y + orient_t1_v.y * 7,
-			qt0_v.z + foward.z + orient_t1_v.z * 7,
+			qt0_v.x + forward.x + orient_t1_v.x * 7,
+			qt0_v.y + forward.y + orient_t1_v.y * 7,
+			qt0_v.z + forward.z + orient_t1_v.z * 7,
 			orient_t1.x, 
 			orient_t1.y, 
 			orient_t1.z
@@ -473,10 +518,6 @@ setProjection()
 #endif
 	}
 }
-
-
-
-
 
 
 //************************************************************************
@@ -525,7 +566,14 @@ void TrainView::drawStuff(bool doingShadows)
 	// TODO: 
 	//	call your own train drawing code
 	//####################################################################
-	draw_train();
+	draw_train(doingShadows);
+
+	// draw our first triangle
+	//glUseProgram(shaderProgram);
+	//glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+	//glDrawArrays(GL_TRIANGLES, 0, 3);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	
 
 
@@ -602,51 +650,70 @@ doPick()
 	printf("Selected Cube %d\n", selectedCube);
 }
 
-void TrainView::draw_train() {
+void TrainView::draw_train(bool doingShadows) {
 	if (!tw->trainCam->value()) {
-		Pnt3f qt;
-		int p1 = m_pTrack->trainU / 1;
-		int p2 = (p1 + 1) % m_pTrack->points.size();
-		int p3 = (p1 + 2) % m_pTrack->points.size();
-		int p0;
-		if (p1 == 0) {
-			p0 = m_pTrack->points.size() - 1;
-		}
-		else {
-			p0 = p1 - 1;
+		int Cp = m_pTrack->trainU / 1;
+
+		vector<Pnt3f> points = find_Cpoints(Cp);
+
+		float t0 = m_pTrack->trainU - Cp;
+		float t1 = t0 + 0.01;
+		if (t1 >= 1) {
+			t1 = 1;
 		}
 
-		float t = m_pTrack->trainU - p1;
-		vector<Pnt3f> points = {
-			m_pTrack->points[p0].pos,
-			m_pTrack->points[p1].pos,
-			m_pTrack->points[p2].pos,
-			m_pTrack->points[p3].pos
-		};
+		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
-		if (tw->splineBrowser->value() == 1) {
-			qt = (1 - t) * m_pTrack->points[p1].pos + t * m_pTrack->points[p2].pos;
-		}
-		else if (tw->splineBrowser->value() == 2) {
-			qt = find_qt(2, points, t);
-		}
-		else if (tw->splineBrowser->value() == 3) {
-			qt = find_qt(3, points, t);
+
+		glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
+		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
+		glm::vec3 forward = qt1_v - qt0_v;
+		forward = glm::normalize(forward);
+
+
+		Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
+		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
+
+		Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+		Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
+
+		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
+		orient_t0_v = glm::normalize(orient_t0_v);
+		glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
+		orient_t1_v = glm::normalize(orient_t1_v);
+
+
+
+		unsigned r = 100;
+		unsigned g = 120;
+		unsigned b = 140;
+		if (!doingShadows) {
+			glColor3ub(r, g, b);
 		}
 
+		glm::mat4 scale = glm::mat4(1.0f);
+		scale = glm::scale(scale, glm::vec3(5, 5, 5));
+
+		quat MyQuaternion = my_LookAt(forward, orient_t0_v);
+
+		mat4 RotationMatrix = glm::toMat4(MyQuaternion);
+
+		glm::mat4 trans = glm::mat4(1.0f);
+		trans = glm::translate(trans, qt0_v);
+		trans = glm::translate(trans, 10.0f* orient_t0_v);
 
 		glBegin(GL_TRIANGLES);
 		for (int i = 0; i < my_train.vertices.size(); ++i) {
-			glColor3f(0.1*i, 0.5 + 0.01*i, 0.8);
+			
+			//glColor3f(0.5, 1, 0.8);
 			glm::vec4 vec(my_train.vertices[i].x, my_train.vertices[i].y, my_train.vertices[i].z, 1.0f);
-			glm::mat4 trans = glm::mat4(1.0f);
-			trans = glm::translate(trans, glm::vec3(qt.x, qt.y, qt.z));
+
+			
 			
 
-			glm::mat4 scale = glm::mat4(1.0f);
-			scale = glm::scale(scale, glm::vec3(5,5,5));
+			
 
-			vec = trans * scale * vec;
+			vec = trans * RotationMatrix *scale * vec;
 
 			glVertex3f(vec.x, vec.y, vec.z);
 			//cout << vec.x << " " << vec.y << " " << vec.z << endl;

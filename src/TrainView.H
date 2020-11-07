@@ -50,8 +50,18 @@ class CTrack;
 
 // this uses the old ArcBall Code
 #include "Utilities/ArcBallCam.H"
+#include "Utilities/Pnt3f.H"
 #include "TrainModel.h"
+#include <vector>
 
+// Include GLM
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/norm.hpp>
 
 class TrainView : public Fl_Gl_Window
 {
@@ -69,7 +79,7 @@ class TrainView : public Fl_Gl_Window
 		void drawStuff(bool doingShadows=false);
 
 		//my function that draws the train
-		void draw_train();
+		void draw_train(bool doingShadows);
 
 		//my function that draws the track
 		void draw_track(bool doingShadows);
@@ -94,5 +104,13 @@ class TrainView : public Fl_Gl_Window
 		TrainWindow*	tw;				// The parent of this display window
 		CTrack*			m_pTrack;		// The track of the entire scene
 		TrainModel my_train;			//my train model
+
+		unsigned int VAO;
+		unsigned int VBO;
+		unsigned int EBO;
+		unsigned int shaderProgram;
+
+		//find 4 control point around current point
+		std::vector<Pnt3f> find_Cpoints(int currentPoint);
 };
 

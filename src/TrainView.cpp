@@ -355,8 +355,8 @@ void TrainView::draw()
 		glDisable(GL_LIGHT2);
 	}
 	else {
-		//glEnable(GL_LIGHT1);
-		//glEnable(GL_LIGHT2);
+		glEnable(GL_LIGHT1);
+		glEnable(GL_LIGHT2);
 	}
 
 	//*********************************************************************
@@ -367,10 +367,10 @@ void TrainView::draw()
 	GLfloat lightPosition1[] = { 0, 1, 1, 0 }; // {50, 200.0, 50, 1.0};
 	GLfloat lightPosition2[] = { 1, 0, 0, 0 };
 	GLfloat lightPosition3[] = { 0, -1, 0, 0 };
-	GLfloat yellowLight[] = { 0.5f, 0.5f, .1f, 1.0 };
+	GLfloat yellowLight[] = { 0.3f, 0.3f, .05f, 1.0 };
 	GLfloat whiteLight[] = { 0.5f, 0.5f, 0.5f, 1.0 };
 	GLfloat blueLight[] = { .1f,.1f,.3f,1.0 };
-	GLfloat grayLight[] = { .3f, .3f, .3f, 1.0 };
+	GLfloat grayLight[] = { .1f, .1f, .1f, 1.0 };
 
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition1);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, whiteLight);

@@ -1,5 +1,13 @@
 # CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
+## 2020/11/8
+
+成功Load出obj物件，要把網路上載的東東，丟到blender在匯出來就可以用了
+把小考的三種光線做出來
+用模型蓋出枕木
+高清火車頭
+尚未將模型上texture
+
 ## 2020/11/7
 
 利用glm的quaternion讓火車頭可以朝著移動的方向

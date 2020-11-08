@@ -35,6 +35,7 @@
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -90,13 +91,15 @@ std::vector<Pnt3f> TrainView::find_Cpoints(int currentPoint) {
 //========================================================================
 TrainView::
 TrainView(int x, int y, int w, int h, const char* l)
-	: Fl_Gl_Window(x, y, w, h, l), my_train("./TrackFiles/cube.obj")
+	: Fl_Gl_Window(x, y, w, h, l), 
+	my_train("./TrackFiles/train2.obj"),
+	my_sleeper("./TrackFiles/sleeper.obj"),
+	my_track("./TrackFiles/track.obj")
 	//========================================================================
 {
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 
 	resetArcball();
-
 
 }
 
@@ -352,8 +355,8 @@ void TrainView::draw()
 		glDisable(GL_LIGHT2);
 	}
 	else {
-		glEnable(GL_LIGHT1);
-		glEnable(GL_LIGHT2);
+		//glEnable(GL_LIGHT1);
+		//glEnable(GL_LIGHT2);
 	}
 
 	//*********************************************************************
@@ -361,11 +364,11 @@ void TrainView::draw()
 	// * set the light parameters
 	//
 	//**********************************************************************
-	GLfloat lightPosition1[] = { 0,1,1,0 }; // {50, 200.0, 50, 1.0};
+	GLfloat lightPosition1[] = { 0, 1, 1, 0 }; // {50, 200.0, 50, 1.0};
 	GLfloat lightPosition2[] = { 1, 0, 0, 0 };
 	GLfloat lightPosition3[] = { 0, -1, 0, 0 };
 	GLfloat yellowLight[] = { 0.5f, 0.5f, .1f, 1.0 };
-	GLfloat whiteLight[] = { 1.0f, 1.0f, 1.0f, 1.0 };
+	GLfloat whiteLight[] = { 0.5f, 0.5f, 0.5f, 1.0 };
 	GLfloat blueLight[] = { .1f,.1f,.3f,1.0 };
 	GLfloat grayLight[] = { .3f, .3f, .3f, 1.0 };
 
@@ -376,10 +379,11 @@ void TrainView::draw()
 	glLightfv(GL_LIGHT1, GL_POSITION, lightPosition2);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, yellowLight);
 
+
 	glLightfv(GL_LIGHT2, GL_POSITION, lightPosition3);
 	glLightfv(GL_LIGHT2, GL_DIFFUSE, blueLight);
 
-
+	set_train_light();
 
 	//*********************************************************************
 	// now draw the ground plane
@@ -482,40 +486,87 @@ setProjection()
 		orient_t0_v = glm::normalize(orient_t0_v);
 		glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
 		orient_t1_v = glm::normalize(orient_t1_v);
+
+		
+		float FPV_up_value = 10.0f;
+		float TPV_up_value = 20.0f;
+		float TPV_backward_value = 30.0f;
+
+
+
 		
 #ifdef DEBUG
-		cout << "----------------------------------" << endl;
-		cout << "t0: " << t0 << " t1: " << t1 << endl;
-		cout << "qts[0]: " << qts[0].x << " " << qts[0].y << " " << qts[0].z << endl;
-		cout << "qts[1]: " << qts[1].x << " " << qts[1].y << " " << qts[1].z << endl;
-		cout << "orient1: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
-		cout << "orient2: " << orient_t1_v.x << " " << orient_t1_v.y << " " << orient_t1_v.z << endl;
-		cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
+		//cout << "----------------------------------" << endl;
+		//cout << "t0: " << t0 << " t1: " << t1 << endl;
+		//cout << "qts[0]: " << qts[0].x << " " << qts[0].y << " " << qts[0].z << endl;
+		//cout << "qts[1]: " << qts[1].x << " " << qts[1].y << " " << qts[1].z << endl;
+		//cout << "orient1: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
+		//cout << "orient2: " << orient_t1_v.x << " " << orient_t1_v.y << " " << orient_t1_v.z << endl;
+		//cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
 		
 #endif // DEBUG
+		if (tw->FPV->value() == 1) {
+			glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
+			glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
+			glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+			glm::mat4 trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, FPV_up_value * offset0);
+			eye = trans * eye;
+
+			glm::vec3 offset1(orient_t1_v.x, orient_t1_v.y, orient_t1_v.z);
+			trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, FPV_up_value * offset1);
+			center = trans * center;
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(120, 1, 1, 200);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			gluLookAt(
+				eye.x,
+				eye.y,
+				eye.z,
+				center.x,
+				center.y,
+				center.z,
+				orient_t1.x,
+				orient_t1.y,
+				orient_t1.z
+			);
+		}
+		else if (tw->TPV->value() == 1) {
+			glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
+			glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
+			glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+			glm::mat4 trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, TPV_up_value * offset0);
+			trans = glm::translate(trans, TPV_backward_value * -forward);
+			eye = trans * eye;
+
+			glm::vec3 offset1(orient_t1_v.x, orient_t1_v.y, orient_t1_v.z);
+			trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, TPV_up_value * offset1);
+			trans = glm::translate(trans, TPV_backward_value * -forward);
+			center = trans * center;
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(120, 1, 1, 200);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			gluLookAt(
+				eye.x,
+				eye.y,
+				eye.z,
+				center.x,
+				center.y,
+				center.z,
+				orient_t1.x,
+				orient_t1.y,
+				orient_t1.z
+			);
+		}
 		
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		gluPerspective(120, 1, 1, 200); 
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		gluLookAt(
-			qt0_v.x + orient_t0_v.x * 7,
-			qt0_v.y + orient_t0_v.y * 7,
-			qt0_v.z + orient_t0_v.z * 7,
-			qt0_v.x + forward.x + orient_t1_v.x * 7,
-			qt0_v.y + forward.y + orient_t1_v.y * 7,
-			qt0_v.z + forward.z + orient_t1_v.z * 7,
-			orient_t1.x, 
-			orient_t1.y, 
-			orient_t1.z
-		);
 
-
-
-#ifdef EXAMPLE_SOLUTION
-		trainCamView(this, aspect);
-#endif
 	}
 }
 
@@ -555,11 +606,7 @@ void TrainView::drawStuff(bool doingShadows)
 	//####################################################################
 	draw_track(doingShadows);
 	
-
-
-#ifdef EXAMPLE_SOLUTION
-	drawTrack(this, doingShadows);
-#endif
+	draw_sleeper(doingShadows);
 
 	// draw the train
 	//####################################################################
@@ -567,21 +614,6 @@ void TrainView::drawStuff(bool doingShadows)
 	//	call your own train drawing code
 	//####################################################################
 	draw_train(doingShadows);
-
-	// draw our first triangle
-	//glUseProgram(shaderProgram);
-	//glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-	//glDrawArrays(GL_TRIANGLES, 0, 3);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-	
-
-
-#ifdef EXAMPLE_SOLUTION
-	// don't draw the train if you're looking out the front window
-	if (!tw->trainCam->value())
-		drawTrain(this, doingShadows);
-#endif
 }
 
 // 
@@ -651,7 +683,7 @@ doPick()
 }
 
 void TrainView::draw_train(bool doingShadows) {
-	if (!tw->trainCam->value()) {
+	if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
 		int Cp = m_pTrack->trainU / 1;
 
 		vector<Pnt3f> points = find_Cpoints(Cp);
@@ -663,7 +695,6 @@ void TrainView::draw_train(bool doingShadows) {
 		}
 
 		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
-
 
 		glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
 		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
@@ -684,23 +715,38 @@ void TrainView::draw_train(bool doingShadows) {
 
 
 
-		unsigned r = 100;
-		unsigned g = 120;
-		unsigned b = 140;
-		if (!doingShadows) {
-			glColor3ub(r, g, b);
-		}
 
+		float scale_value = 0.3;
 		glm::mat4 scale = glm::mat4(1.0f);
-		scale = glm::scale(scale, glm::vec3(5, 5, 5));
+		scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
 
 		quat MyQuaternion = my_LookAt(forward, orient_t0_v);
 
 		mat4 RotationMatrix = glm::toMat4(MyQuaternion);
+		float rotateArray[16] = { 0.0 };
+		const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
+		for (int i = 0; i < 16; ++i)
+			rotateArray[i] = pSource[i];
 
 		glm::mat4 trans = glm::mat4(1.0f);
 		trans = glm::translate(trans, qt0_v);
 		trans = glm::translate(trans, 10.0f* orient_t0_v);
+
+		glPushMatrix();
+		glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+		float up_offset = 0.0f;
+		glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+		glMultMatrixf(rotateArray);
+		glScalef(scale_value, scale_value, scale_value);
+
+		unsigned int r = 200;
+		unsigned int g = 200;
+		unsigned int b = 200;
+		if (!doingShadows) {
+			glColor3ub(r, g, b);
+		}
+
+		
 
 		glBegin(GL_TRIANGLES);
 		for (int i = 0; i < my_train.vertices.size(); ++i) {
@@ -708,136 +754,357 @@ void TrainView::draw_train(bool doingShadows) {
 			//glColor3f(0.5, 1, 0.8);
 			glm::vec4 vec(my_train.vertices[i].x, my_train.vertices[i].y, my_train.vertices[i].z, 1.0f);
 
-			
-			
-
-			
-
-			vec = trans * RotationMatrix *scale * vec;
-
+			//vec = trans * RotationMatrix *scale * vec;
+			glNormal3d(my_train.normals[i].x, my_train.normals[i].y,  my_train.normals[i].z);
 			glVertex3f(vec.x, vec.y, vec.z);
 			//cout << vec.x << " " << vec.y << " " << vec.z << endl;
 
 		}
 		glEnd();
-
-
-		//glBegin(GL_QUADS);
-		//glColor3f(1.0, 1.0, 0.0);
-		//glTexCoord2f(0.0f, 0.0f);
-		//glVertex3f(qt.x - 5, qt.y - 5, qt.z - 5);
-		//glTexCoord2f(1.0f, 0.0f);
-		//glVertex3f(qt.x + 5, qt.y - 5, qt.z - 5);
-		//glTexCoord2f(1.0f, 1.0f);
-		//glVertex3f(qt.x + 5, qt.y + 5, qt.z - 5);
-		//glTexCoord2f(0.0f, 1.0f);
-		//glVertex3f(qt.x - 5, qt.y + 5, qt.z - 5);
-		//glEnd();
-		//cout << qt.x << " " << qt.y << " " << qt.z << endl;
+		glPopMatrix();
 	}
 }
 
 void TrainView::draw_track(bool doingShadows) {
 	for (int i = 0; i < m_pTrack->points.size(); ++i) {
 
-		Pnt3f cp_pos_p0;
-		if (i == 0) {
-			cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
-		}
-		else {
-			cp_pos_p0 = m_pTrack->points[(i - 1)].pos;
-		}
-		Pnt3f cp_pos_p1 = m_pTrack->points[i].pos;
-		Pnt3f cp_pos_p2 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].pos;
-		Pnt3f cp_pos_p3 = m_pTrack->points[(i + 2) % m_pTrack->points.size()].pos;
 
-		Pnt3f cp_orient_p1 = m_pTrack->points[i].orient;
-		Pnt3f cp_orient_p2 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
+		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
+		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
 
-		vector<Pnt3f> points = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
+		vector<Pnt3f> points = find_Cpoints(i);
 
 		float percent = 1.0f / DIVIDE_LINE;
-		float t = 0;
+		float t0 = 0;
+		float t1 = t0 + 0.01;
 
 
 		int spline_type = tw->splineBrowser->value();
-		Pnt3f qt = find_qt(spline_type, points, t);
-
-		Pnt3f qt0;
-		Pnt3f qt1;
-		Pnt3f orient_t;
 
 
 
 		for (size_t j = 0; j < DIVIDE_LINE; j++) {
-			qt0 = find_qt(spline_type, points, t - 0.005);;
+			if (t1 >= 1) {
+				t1 = 1;
+			}
+			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
-			//linear interpolation orient
-			orient_t = (1 - t) * cp_orient_p1 + t * cp_orient_p2;
+			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
+			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
+			glm::vec3 forward = qt1_v - qt0_v;
+			forward = glm::normalize(forward);
 
-			t += percent;
+			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+			Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
 
-			qt = find_qt(spline_type, points, t);
-			qt1 = qt;
+			glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
+			orient_t0_v = glm::normalize(orient_t0_v);
+			glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
+			orient_t1_v = glm::normalize(orient_t1_v);
 
-			glm::vec3 qt0_vec(qt0.x, qt0.y, qt0.z);
-			glm::vec3 qt1_vec(qt1.x, qt1.y, qt1.z);
-			glm::vec3 forward_vec(qt1.x - qt0.x, qt1.y - qt0.y, qt1.z - qt0.z);
-			glm::vec3 orient_vec(orient_t.x, orient_t.y, orient_t.z);
-			glm::vec3 offset_vec1 = glm::cross(forward_vec, orient_vec);
+
+			glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
 			offset_vec1 = glm::normalize(offset_vec1);
 			offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
-			glm::vec3 offset_vec2 = 2.0f * offset_vec1;
+			glm::vec3 offset_vec2 = 1.5f * offset_vec1;
 
 
-			glm::vec3 left_track0 = qt0_vec + offset_vec1;
-			glm::vec3 left_track1 = qt1_vec + offset_vec1;
-			glm::vec3 left_track2 = qt1_vec + offset_vec2;
-			glm::vec3 left_track3 = qt0_vec + offset_vec2;
-			glm::vec3 right_track0 = qt0_vec - offset_vec1;
-			glm::vec3 right_track1 = qt1_vec - offset_vec1;
-			glm::vec3 right_track2 = qt1_vec - offset_vec2;
-			glm::vec3 right_track3 = qt0_vec - offset_vec2;
+			glm::vec3 left_track0 = qt0_v + offset_vec1;
+			glm::vec3 left_track1 = qt1_v + offset_vec1;
+			glm::vec3 left_track2 = qt1_v + offset_vec2;
+			glm::vec3 left_track3 = qt0_v + offset_vec2;
+			glm::vec3 right_track0 = qt0_v - offset_vec1;
+			glm::vec3 right_track1 = qt1_v - offset_vec1;
+			glm::vec3 right_track2 = qt1_v - offset_vec2;
+			glm::vec3 right_track3 = qt0_v - offset_vec2;
 
 			glLineWidth(5);
 
-			//single track
-			//glBegin(GL_LINES);
-			//if (!doingShadows) {
-			//	glColor3ub(32, 32, 64);
-			//}
-			//glVertex3f(qt0.x, qt0.y, qt0.z);
-			//glVertex3f(qt1.x, qt1.y, qt1.z);
-			//glEnd();
-
-			//left track
-			glBegin(GL_POLYGON);
-			unsigned r = 123;
-			unsigned g = 200;
-			unsigned b = 30;
-			if (!doingShadows) {
-				glColor3ub(r,g,b);
+			//draw selected track type
+			if (tw->trackBrowser->value() == 1) {
+				//single track
+				glBegin(GL_LINES);
+				if (!doingShadows) {
+					glColor3ub(32, 32, 64);
+				}
+				glVertex3f(qt0_v.x, qt0_v.y, qt0_v.z);
+				glVertex3f(qt1_v.x, qt1_v.y, qt1_v.z);
+				glEnd();
 			}
-			glVertex3f(left_track0.x, left_track0.y, left_track0.z);
-			glVertex3f(left_track1.x, left_track1.y, left_track1.z);
-			glVertex3f(left_track2.x, left_track2.y, left_track2.z);
-			glVertex3f(left_track3.x, left_track3.y, left_track3.z);
-			glEnd();
+			else if (tw->trackBrowser->value() == 2) {
+				//left track
+				glBegin(GL_POLYGON);
+				unsigned r = 50;
+				unsigned g = 50;
+				unsigned b = 50;
+				if (!doingShadows) {
+					glColor3ub(r, g, b);
+				}
+				glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+				glVertex3f(left_track0.x, left_track0.y, left_track0.z);
+				glVertex3f(left_track1.x, left_track1.y, left_track1.z);
+				glVertex3f(left_track2.x, left_track2.y, left_track2.z);
+				glVertex3f(left_track3.x, left_track3.y, left_track3.z);
+				glEnd();
 
-			//right track
-			glBegin(GL_POLYGON);
-			if (!doingShadows) {
-				glColor3ub(r, g, b);
+				//right track
+				glBegin(GL_POLYGON);
+				if (!doingShadows) {
+					glColor3ub(r, g, b);
+				}
+				glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+				glVertex3f(right_track0.x, right_track0.y, right_track0.z);
+				glVertex3f(right_track1.x, right_track1.y, right_track1.z);
+				glVertex3f(right_track2.x, right_track2.y, right_track2.z);
+				glVertex3f(right_track3.x, right_track3.y, right_track3.z);
+				glEnd();
 			}
-			glVertex3f(right_track0.x, right_track0.y, right_track0.z);
-			glVertex3f(right_track1.x, right_track1.y, right_track1.z);
-			glVertex3f(right_track2.x, right_track2.y, right_track2.z);
-			glVertex3f(right_track3.x, right_track3.y, right_track3.z);
-			glEnd();
+			else if (tw->trackBrowser->value() == 3) {
+				float scale_value = 1.0f;
+				glm::mat4 scale = glm::mat4(1.0f);
+				scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
 
+				quat MyQuaternion = my_LookAt(forward, orient_t0_v);
 
+				mat4 RotationMatrix = glm::toMat4(MyQuaternion);
+				float rotateArray[16] = { 0.0 };
+				const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
+				for (int i = 0; i < 16; ++i)
+					rotateArray[i] = pSource[i];
+
+				float up_offset = -1.0f;
+
+				glm::mat4 trans = glm::mat4(1.0f);
+				trans = glm::translate(trans, qt0_v);
+				trans = glm::translate(trans, up_offset * orient_t0_v);
+
+				glPushMatrix();
+				glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+				glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+				glMultMatrixf(rotateArray);
+				glRotatef(90.0f, 0, 1, 0);
+				glScalef(scale_value, scale_value, scale_value);
+
+				unsigned int r = 230;
+				unsigned int g = 180;
+				unsigned int b = 50;
+				if (!doingShadows) {
+					glColor3ub(r, g, b);
+				}
+
+				glBegin(GL_TRIANGLES);
+				for (int i = 0; i < my_track.vertices.size(); ++i) {
+
+					//glColor3f(0.5, 1, 0.8);
+					glm::vec4 vec(my_track.vertices[i].x, my_track.vertices[i].y, my_track.vertices[i].z, 1.0f);
+
+					//vec = trans * RotationMatrix *scale * vec;
+					glNormal3d(my_track.normals[i].x, my_track.normals[i].y, my_track.normals[i].z);
+					glVertex3f(vec.x, vec.y, vec.z);
+					//cout << vec.x << " " << vec.y << " " << vec.z << endl;
+
+				}
+				glEnd();
+				glPopMatrix();
+			}
 
 			glLineWidth(1);
+			t0 += percent;
+			t1 = t0 + 0.01;
 		}
 	}
+}
+
+void TrainView::draw_sleeper(bool doingShadows) {
+	for (int i = 0; i < m_pTrack->points.size(); ++i) {
+
+
+		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
+		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
+
+		vector<Pnt3f> points = find_Cpoints(i);
+
+		float percent = 1.0f / DIVIDE_LINE;
+		float t0 = 0;
+		float t1 = t0 + 0.01;
+
+		int counter = 0;
+
+		int spline_type = tw->splineBrowser->value();
+
+		for (size_t j = 0; j < DIVIDE_LINE; j++) {
+			
+			if (t1 >= 1) {
+				t1 = 1;
+			}
+			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
+
+			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
+			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
+			glm::vec3 forward = qt1_v - qt0_v;
+			forward = glm::normalize(forward);
+
+			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+			Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
+
+			glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
+			orient_t0_v = glm::normalize(orient_t0_v);
+			glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
+			orient_t1_v = glm::normalize(orient_t1_v);
+
+	
+
+			glLineWidth(5);
+
+			//draw selected track type
+			if (tw->trackBrowser->value() == 1) {
+				
+			}
+			else if ((tw->trackBrowser->value() == 2 || tw->trackBrowser->value() == 3) && counter % 8 == 0 ) {
+				float scale_value = 3.5f;
+				glm::mat4 scale = glm::mat4(1.0f);
+				scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
+
+				quat MyQuaternion = my_LookAt(forward, orient_t0_v);
+
+				mat4 RotationMatrix = glm::toMat4(MyQuaternion);
+				float rotateArray[16] = { 0.0 };
+				const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
+				for (int i = 0; i < 16; ++i)
+					rotateArray[i] = pSource[i];
+
+				glm::mat4 trans = glm::mat4(1.0f);
+				trans = glm::translate(trans, qt0_v);
+				trans = glm::translate(trans, 1.0f * -orient_t0_v);
+
+				glPushMatrix();
+				glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+				float up_offset = -1.0f;
+				glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+				glMultMatrixf(rotateArray);
+				glRotatef(90.0f, 0, 1, 0);
+				glScalef(scale_value, scale_value, scale_value);
+
+				unsigned int r = 230;
+				unsigned int g = 180;
+				unsigned int b = 50;
+				if (!doingShadows) {
+					glColor3ub(r, g, b);
+				}
+
+				glBegin(GL_TRIANGLES);
+				for (int i = 0; i < my_sleeper.vertices.size(); ++i) {
+
+					//glColor3f(0.5, 1, 0.8);
+					glm::vec4 vec(my_sleeper.vertices[i].x, my_sleeper.vertices[i].y, my_sleeper.vertices[i].z, 1.0f);
+
+					//vec = trans * RotationMatrix *scale * vec;
+					glNormal3d(my_sleeper.normals[i].x, my_sleeper.normals[i].y, my_sleeper.normals[i].z);
+					glVertex3f(vec.x, vec.y, vec.z);
+					//cout << vec.x << " " << vec.y << " " << vec.z << endl;
+
+				}
+				glEnd();
+				glPopMatrix();
+			}
+
+			glLineWidth(1);
+
+
+			t0 += percent;
+			t1 = t0 + 0.01;
+			++counter;
+		}
+	}
+}
+
+void TrainView::set_train_light() {
+	int Cp = m_pTrack->trainU / 1;
+
+	vector<Pnt3f> points = find_Cpoints(Cp);
+
+	float t0 = m_pTrack->trainU - Cp;
+	float t1 = t0 + 0.01;
+	if (t1 >= 1) {
+		t1 = 1;
+	}
+
+	vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
+
+	glm::vec4 qt0_v(qts[0].x, qts[0].y, qts[0].z, 1);
+	glm::vec4 qt1_v(qts[1].x, qts[1].y, qts[1].z, 1);
+	glm::vec3 forward = qt1_v - qt0_v;
+	forward = glm::normalize(forward);
+
+
+	Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
+	Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
+
+	Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+	Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
+
+	glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
+	orient_t0_v = glm::normalize(orient_t0_v);
+	glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
+	orient_t1_v = glm::normalize(orient_t1_v);
+
+	glm::mat4 trans = glm::mat4(1.0f);
+	trans = glm::translate(trans, 5.0f * orient_t0_v);
+	qt0_v = trans * qt0_v;
+
+	float ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float diffuse[] = { 0.7f, 0.7f, 0.3f, 1.0f };
+	float position[] = { qt0_v.x, qt0_v.y, qt0_v.z, 1.0f };
+
+	//float position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
+	float direction[] = { forward.x, forward.y, forward.z };
+	//float direction[] = { 0, 1.0f, 0 };
+
+#ifdef DEBUG
+  cout << "pos: " << position[0] << " " << position[1] << " " << position[2] << endl;
+  cout << "forward: " << forward.x << " " << forward.x << " " << forward.x << " " << endl;
+#endif // DEBUG
+
+	//directional light
+	position[3] = 0.0f;
+	glLightfv(GL_LIGHT3, GL_AMBIENT, ambient);
+	glLightfv(GL_LIGHT3, GL_DIFFUSE, diffuse);
+	glLightfv(GL_LIGHT3, GL_POSITION, position);
+
+	position[3] = 1.0f;
+	//point light
+	glLightfv(GL_LIGHT4, GL_AMBIENT, ambient);
+	glLightfv(GL_LIGHT4, GL_DIFFUSE, diffuse);
+	glLightfv(GL_LIGHT4, GL_POSITION, position);
+
+	//spot light
+	glLightfv(GL_LIGHT5, GL_AMBIENT, ambient);
+	glLightfv(GL_LIGHT5, GL_DIFFUSE, diffuse);
+	glLightfv(GL_LIGHT5, GL_POSITION, position);
+
+	//spot direction
+	glLightfv(GL_LIGHT5, GL_SPOT_DIRECTION, direction);
+	//angle of the clone
+	glLightf(GL_LIGHT5, GL_SPOT_CUTOFF, 30.0f);
+	//concentration of the light
+	glLightf(GL_LIGHT5, GL_SPOT_EXPONENT, 0.1f);
+
+	//light attenuation
+	glLightf(GL_LIGHT5, GL_CONSTANT_ATTENUATION, 0.2f);
+	glLightf(GL_LIGHT5, GL_LINEAR_ATTENUATION, 0.0f);
+	glLightf(GL_LIGHT5, GL_QUADRATIC_ATTENUATION, 0.0f);
+
+	glDisable(GL_LIGHT3);
+	glDisable(GL_LIGHT4);
+	glDisable(GL_LIGHT5);
+	if (tw->lightBrowser->value() == 1) {
+		glEnable(GL_LIGHT3);
+	}
+	else if (tw->lightBrowser->value() == 2) {
+		glEnable(GL_LIGHT4);
+	}
+	else if (tw->lightBrowser->value() == 3) {
+		glEnable(GL_LIGHT5);
+	}
+	
 }

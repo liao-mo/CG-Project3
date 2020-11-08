@@ -83,6 +83,9 @@ class TrainView : public Fl_Gl_Window
 
 		//my function that draws the track
 		void draw_track(bool doingShadows);
+
+		//my function that draws the sleeper
+		void draw_sleeper(bool doingShadows);
 		
 
 		// setup the projection - assuming that the projection stack has been
@@ -95,6 +98,8 @@ class TrainView : public Fl_Gl_Window
 		// pick a point (for when the mouse goes down)
 		void doPick();
 
+		void set_train_light();
+
 
 
 	public:
@@ -104,6 +109,8 @@ class TrainView : public Fl_Gl_Window
 		TrainWindow*	tw;				// The parent of this display window
 		CTrack*			m_pTrack;		// The track of the entire scene
 		TrainModel my_train;			//my train model
+		TrainModel my_sleeper;			//my train model
+		TrainModel my_track;			//my train model
 
 		unsigned int VAO;
 		unsigned int VBO;

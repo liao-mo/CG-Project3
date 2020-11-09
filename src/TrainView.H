@@ -119,5 +119,7 @@ class TrainView : public Fl_Gl_Window
 
 		//find 4 control point around current point
 		std::vector<Pnt3f> find_Cpoints(int currentPoint);
+		//find 4 orient vector around current point
+		std::vector<Pnt3f> find_orient_vectors(int currentPoint);
 };
 

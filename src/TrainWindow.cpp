@@ -248,7 +248,7 @@ advanceTrain(float dir)
 #endif // DEBUG
 
 	trainView->m_pTrack->trainU += speed_val;
-	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size()) {
+	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size() - 0.01) {
 		trainView->m_pTrack->trainU -= trainView->m_pTrack->points.size();
 	}
 

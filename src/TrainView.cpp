@@ -67,18 +67,52 @@ using namespace std;
 
 //find 4 control point around current point
 std::vector<Pnt3f> TrainView::find_Cpoints(int currentPoint) {
+#ifdef DEBUG
+	
+#endif // DEBUG
+
 	Pnt3f cp_pos_p0;
 	if (currentPoint == 0) {
 		cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
+		//cout << "cp0: " << m_pTrack->points.size() - 1;
 	}
 	else {
 		cp_pos_p0 = m_pTrack->points[(currentPoint - 1)].pos;
+		//cout << "cp0: " << currentPoint - 1;
 	}
 	Pnt3f cp_pos_p1 = m_pTrack->points[currentPoint].pos;
+	//cout << " cp1: " << currentPoint;
 	Pnt3f cp_pos_p2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].pos;
+	//cout << " cp2: " << (currentPoint + 1) % m_pTrack->points.size();
 	Pnt3f cp_pos_p3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].pos;
+	//cout << " cp3: " << (currentPoint + 2) % m_pTrack->points.size();
+	//cout << endl;
+
+	
 
 	std::vector<Pnt3f> output = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
+	return output;
+
+}
+
+//find 4 orient vector around current point
+std::vector<Pnt3f> TrainView::find_orient_vectors(int currentPoint) {
+#ifdef DEBUG
+
+#endif // DEBUG
+
+	Pnt3f orient0;
+	if (currentPoint == 0) {
+		orient0 = m_pTrack->points[(m_pTrack->points.size() - 1)].orient;
+	}
+	else {
+		orient0 = m_pTrack->points[(currentPoint - 1)].orient;
+	}
+	Pnt3f orient1 = m_pTrack->points[currentPoint].orient;
+	Pnt3f orient2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].orient;
+	Pnt3f orient3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].orient;
+
+	std::vector<Pnt3f> output = { orient0, orient1, orient2, orient3 };
 	return output;
 
 }
@@ -392,7 +426,7 @@ void TrainView::draw()
 	glUseProgram(0);
 
 	setupFloor();
-	glDisable(GL_LIGHTING);
+	//glDisable(GL_LIGHTING);
 	drawFloor(200, 10);
 
 
@@ -463,9 +497,9 @@ setProjection()
 
 		float t0 = m_pTrack->trainU - Cp;
 		float t1 = t0 + 0.01;
-		if (t1 >= 1) {
-			t1 = 1;
-		}
+		//if (t1 >= 1) {
+		//	t1 = 1;
+		//}
 
 		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
@@ -683,37 +717,49 @@ doPick()
 }
 
 void TrainView::draw_train(bool doingShadows) {
+#ifdef DEBUG
+	cout << "====================" << endl;
+#endif // DEBUG
+
 	if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
 		int Cp = m_pTrack->trainU / 1;
+
 
 		vector<Pnt3f> points = find_Cpoints(Cp);
 
 		float t0 = m_pTrack->trainU - Cp;
 		float t1 = t0 + 0.01;
-		if (t1 >= 1) {
-			t1 = 1;
-		}
+#ifdef DEBUG
+		//cout << "t0: " << t0 << endl;
+		//cout << "trainU: " << m_pTrack->trainU << endl;
+#endif // DEBUG
 
 		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
+		vector<Pnt3f> orients = find_orient_vectors(Cp);
 
 		glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
 		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
 		glm::vec3 forward = qt1_v - qt0_v;
+		//cout << "forward length: " << glm::length(forward) << endl;
+		cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
+		
 		forward = glm::normalize(forward);
 
 
 		Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
 		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
 
-		Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
-		Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
+		//Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+		Pnt3f orient_t0 = spline_orient(orients, t0);
+		//Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
+		Pnt3f orient_t1 = spline_orient(orients, t1);
 
 		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-		orient_t0_v = glm::normalize(orient_t0_v);
+		//orient_t0_v = glm::normalize(orient_t0_v);
 		glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
-		orient_t1_v = glm::normalize(orient_t1_v);
+		//orient_t1_v = glm::normalize(orient_t1_v);
 
-
+		cout << "orient_t0_v: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
 
 
 		float scale_value = 0.3;
@@ -784,9 +830,9 @@ void TrainView::draw_track(bool doingShadows) {
 
 
 		for (size_t j = 0; j < DIVIDE_LINE; j++) {
-			if (t1 >= 1) {
-				t1 = 1;
-			}
+			//if (t1 >= 1) {
+			//	t1 = 1;
+			//}
 			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
 			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
@@ -934,9 +980,9 @@ void TrainView::draw_sleeper(bool doingShadows) {
 
 		for (size_t j = 0; j < DIVIDE_LINE; j++) {
 			
-			if (t1 >= 1) {
-				t1 = 1;
-			}
+			//if (t1 >= 1) {
+			//	t1 = 1;
+			//}
 			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
 			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
@@ -1025,9 +1071,9 @@ void TrainView::set_train_light() {
 
 	float t0 = m_pTrack->trainU - Cp;
 	float t1 = t0 + 0.01;
-	if (t1 >= 1) {
-		t1 = 1;
-	}
+	//if (t1 >= 1) {
+	//	t1 = 1;
+	//}
 
 	vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
 
@@ -1053,7 +1099,7 @@ void TrainView::set_train_light() {
 	qt0_v = trans * qt0_v;
 
 	float ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	float diffuse[] = { 0.7f, 0.7f, 0.3f, 1.0f };
+	float diffuse[] = { 0.9f, 0.3f, 0.3f, 1.0f };
 	float position[] = { qt0_v.x, qt0_v.y, qt0_v.z, 1.0f };
 
 	//float position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
@@ -1061,8 +1107,8 @@ void TrainView::set_train_light() {
 	//float direction[] = { 0, 1.0f, 0 };
 
 #ifdef DEBUG
-  cout << "pos: " << position[0] << " " << position[1] << " " << position[2] << endl;
-  cout << "forward: " << forward.x << " " << forward.x << " " << forward.x << " " << endl;
+  //cout << "pos: " << position[0] << " " << position[1] << " " << position[2] << endl;
+  //cout << "forward: " << forward.x << " " << forward.x << " " << forward.x << " " << endl;
 #endif // DEBUG
 
 	//directional light
@@ -1090,7 +1136,7 @@ void TrainView::set_train_light() {
 	glLightf(GL_LIGHT5, GL_SPOT_EXPONENT, 0.1f);
 
 	//light attenuation
-	glLightf(GL_LIGHT5, GL_CONSTANT_ATTENUATION, 0.2f);
+	glLightf(GL_LIGHT5, GL_CONSTANT_ATTENUATION, 0.05f);
 	glLightf(GL_LIGHT5, GL_LINEAR_ATTENUATION, 0.0f);
 	glLightf(GL_LIGHT5, GL_QUADRATIC_ATTENUATION, 0.0f);
 

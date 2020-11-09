@@ -75,9 +75,6 @@ Pnt3f find_qt(int spline_type, vector<Pnt3f> points, float t) {
 vector<Pnt3f> find_two_qt(int spline_type, vector<Pnt3f> points, float t) {
 	float t0 = t;
 	float t1 = t0 + 0.01;
-	if (t1 >= 1) {
-		t1 = 1;
-	}
 	
 	Pnt3f qt0, qt1;
 
@@ -144,6 +141,39 @@ Pnt3f find_orient(Pnt3f O1, Pnt3f O2, float t) {
 	Pnt3f output;
 	output = (1 - t) * O1 + t * O2;
 	return output;
+}
+
+//find the orient vecotr with spline method and given orients, t
+Pnt3f spline_orient(vector<Pnt3f> orients, float t) {
+	Pnt3f output_orient;
+
+	//geometric constraints matrix
+	Matrix4 G(
+		orients[0].x, orients[0].y, orients[0].z, 1,
+		orients[1].x, orients[1].y, orients[1].z, 1,
+		orients[2].x, orients[2].y, orients[2].z, 1,
+		orients[3].x, orients[3].y, orients[3].z, 1);
+
+
+	//Cardinal Cubic matrix
+	Matrix4 M1(-1, 3, -3, 1, 2, -5, 4, -1, -1, 0, 1, 0, 0, 2, 0, 0);
+	M1 = (1.0 / 2.0) * M1;
+
+	//Cubic B spline matrix
+	//Matrix4 M2(-1, 3, -3, 1, 3, -6, 3, 0, -3, 0, 3, 0, 1, 4, 1, 0);
+	//M2 = (1.0 / 6.0) * M2;
+
+	//parameter matrix
+	Vector4 T(t * t * t, t * t, t, 1);
+
+	Vector4 temp_qt;
+
+		temp_qt = G * M1 * T;
+		output_orient.x = temp_qt.x;
+		output_orient.y = temp_qt.y;
+		output_orient.z = temp_qt.z;
+
+	return output_orient;
 }
 
 // Returns a quaternion such that q*start = dest

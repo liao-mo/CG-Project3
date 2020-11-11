@@ -42,11 +42,6 @@
 // other things we just deal with as pointers, to avoid circular references
 class TrainView;
 
-// if we're also making the sample solution, then we need to know 
-// about the stuff we don't tell students
-#ifdef EXAMPLE_SOLUTION
-#include "TrainExample/TrainExample.H"
-#endif
 
 class TrainWindow : public Fl_Double_Window {
 	public:
@@ -97,6 +92,7 @@ class TrainWindow : public Fl_Double_Window {
 		// if we're animating it, how fast should it go?
 		Fl_Value_Slider*	speed;
 		Fl_Button*			arcLength;		// do we use arc length for speed?
+		Fl_Button* envLight; // do we want environment lighting?
 
 		// we have other widgets as part of the sample solution
 		// this is not for 559 students to know about

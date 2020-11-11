@@ -75,6 +75,8 @@ Pnt3f find_qt(int spline_type, vector<Pnt3f> points, float t) {
 vector<Pnt3f> find_two_qt(int spline_type, vector<Pnt3f> points, float t) {
 	float t0 = t;
 	float t1 = t0 + 0.01;
+
+
 	
 	Pnt3f qt0, qt1;
 

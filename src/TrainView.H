@@ -63,6 +63,8 @@ class CTrack;
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/norm.hpp>
 
+#define DIVIDE_LINE 100
+
 class TrainView : public Fl_Gl_Window
 {
 	public:
@@ -98,8 +100,23 @@ class TrainView : public Fl_Gl_Window
 		// pick a point (for when the mouse goes down)
 		void doPick();
 
+		//setupt train's head light
 		void set_train_light();
 
+		//update track data 
+		void update_arcLengh();
+
+		//use current length to find parameter t
+		float length_to_t(float length);
+
+		//use current length to find current index
+		size_t length_to_index(float length);
+
+		//use trainU t to find current index
+		size_t trainU_to_index(float trainU);
+
+		//match current length and trainU
+		void match_length();
 
 
 	public:
@@ -121,5 +138,12 @@ class TrainView : public Fl_Gl_Window
 		std::vector<Pnt3f> find_Cpoints(int currentPoint);
 		//find 4 orient vector around current point
 		std::vector<Pnt3f> find_orient_vectors(int currentPoint);
+
+		std::vector<float> t_param;
+		std::vector<float> arc_length;
+		std::vector<float> accumulate_length;
+		std::vector<glm::vec3> all_qt;
+		std::vector<glm::vec3> all_orient;
+		std::vector<glm::vec3> all_forward;
 };
 

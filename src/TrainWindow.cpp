@@ -184,7 +184,12 @@ TrainWindow(const int x, const int y)
 		trackBrowser->add("Double 3D");
 		trackBrowser->select(2);
 
-		pty += 110;
+		pty += 100;
+
+		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
+		togglify(envLight, 1);
+
+		pty += 30;
 
 		// TODO: add widgets for all of your fancier features here
 #ifdef EXAMPLE_SOLUTION
@@ -242,15 +247,26 @@ advanceTrain(float dir)
 	//#####################################################################
 	// TODO: make this work for your train
 	//#####################################################################
-	float speed_val = dir * this->speed->value() / 100.0;
+	float speed_val0 = dir * this->speed->value() / 100.0;
+	float speed_val1 = dir * this->speed->value() ;
 #ifdef DEBUG
 	//speed_val = 0.001;
 #endif // DEBUG
 
-	trainView->m_pTrack->trainU += speed_val;
+	if (arcLength->value() == 1) {
+		trainView->m_pTrack->C_length += speed_val1;
+		if (trainView->m_pTrack->C_length > trainView->accumulate_length.back()) trainView->m_pTrack->C_length = 0;
+		trainView->match_length();
+	}
+	else {
+		trainView->m_pTrack->trainU += speed_val0;
+
+	}
+
 	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size() - 0.01) {
 		trainView->m_pTrack->trainU -= trainView->m_pTrack->points.size();
 	}
+
 
 #ifdef EXAMPLE_SOLUTION
 	// note - we give a little bit more example code here than normal,

@@ -61,7 +61,7 @@ using namespace std;
 #	include "TrainExample/TrainExample.H"
 #endif
 
-#define DIVIDE_LINE 100
+
 #define DEBUG
 
 
@@ -134,7 +134,6 @@ TrainView(int x, int y, int w, int h, const char* l)
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 
 	resetArcball();
-
 }
 
 //************************************************************************
@@ -381,7 +380,11 @@ void TrainView::draw()
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+
+	if (tw->envLight->value() == 1) 	glEnable(GL_LIGHT0);
+	else 	glDisable(GL_LIGHT0);
+
+
 
 	// top view only needs one light
 	if (tw->topCam->value()) {
@@ -389,8 +392,14 @@ void TrainView::draw()
 		glDisable(GL_LIGHT2);
 	}
 	else {
-		glEnable(GL_LIGHT1);
-		glEnable(GL_LIGHT2);
+		if (tw->envLight->value() == 1) {
+			glEnable(GL_LIGHT1);
+			glEnable(GL_LIGHT2);
+		}
+		else {
+			glDisable(GL_LIGHT1);
+			glDisable(GL_LIGHT2);
+		}
 	}
 
 	//*********************************************************************
@@ -436,6 +445,7 @@ void TrainView::draw()
 	//*********************************************************************
 	glEnable(GL_LIGHTING);
 	setupObjects();
+	update_arcLengh();
 
 	drawStuff();
 
@@ -514,19 +524,19 @@ setProjection()
 		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
 
 		Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
-		Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
 
 		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
 		orient_t0_v = glm::normalize(orient_t0_v);
-		glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
-		orient_t1_v = glm::normalize(orient_t1_v);
 
 		
 		float FPV_up_value = 10.0f;
 		float TPV_up_value = 20.0f;
 		float TPV_backward_value = 30.0f;
 
-
+		glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
+		glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
+		glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+		glm::mat4 trans = glm::mat4(1.0f);
 
 		
 #ifdef DEBUG
@@ -540,16 +550,9 @@ setProjection()
 		
 #endif // DEBUG
 		if (tw->FPV->value() == 1) {
-			glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
-			glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
-			glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
-			glm::mat4 trans = glm::mat4(1.0f);
 			trans = glm::translate(trans, FPV_up_value * offset0);
 			eye = trans * eye;
 
-			glm::vec3 offset1(orient_t1_v.x, orient_t1_v.y, orient_t1_v.z);
-			trans = glm::mat4(1.0f);
-			trans = glm::translate(trans, FPV_up_value * offset1);
 			center = trans * center;
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
@@ -563,24 +566,16 @@ setProjection()
 				center.x,
 				center.y,
 				center.z,
-				orient_t1.x,
-				orient_t1.y,
-				orient_t1.z
+				orient_t0.x,
+				orient_t0.y,
+				orient_t0.z
 			);
 		}
 		else if (tw->TPV->value() == 1) {
-			glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
-			glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
-			glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
-			glm::mat4 trans = glm::mat4(1.0f);
 			trans = glm::translate(trans, TPV_up_value * offset0);
 			trans = glm::translate(trans, TPV_backward_value * -forward);
 			eye = trans * eye;
 
-			glm::vec3 offset1(orient_t1_v.x, orient_t1_v.y, orient_t1_v.z);
-			trans = glm::mat4(1.0f);
-			trans = glm::translate(trans, TPV_up_value * offset1);
-			trans = glm::translate(trans, TPV_backward_value * -forward);
 			center = trans * center;
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
@@ -594,9 +589,9 @@ setProjection()
 				center.x,
 				center.y,
 				center.z,
-				orient_t1.x,
-				orient_t1.y,
-				orient_t1.z
+				orient_t0.x,
+				orient_t0.y,
+				orient_t0.z
 			);
 		}
 		
@@ -718,10 +713,22 @@ doPick()
 
 void TrainView::draw_train(bool doingShadows) {
 #ifdef DEBUG
-	cout << "====================" << endl;
+	//cout << "====================" << endl;
 #endif // DEBUG
 
 	if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
+		//size_t i = trainU_to_index(m_pTrack->trainU);
+		//float current_t = t_param[i];
+
+		//glm::vec3 qt0_v = all_qt[i];
+		//glm::vec3 qt1_v;
+		//if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		//else qt1_v = all_qt[i + 1];
+
+		//glm::vec3 orient_t0_v = all_orient[i];
+		//glm::vec3 forward = all_forward[i];
+
+
 		int Cp = m_pTrack->trainU / 1;
 
 
@@ -741,7 +748,7 @@ void TrainView::draw_train(bool doingShadows) {
 		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
 		glm::vec3 forward = qt1_v - qt0_v;
 		//cout << "forward length: " << glm::length(forward) << endl;
-		cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
+		//cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
 		
 		forward = glm::normalize(forward);
 
@@ -749,17 +756,12 @@ void TrainView::draw_train(bool doingShadows) {
 		Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
 		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
 
-		//Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
 		Pnt3f orient_t0 = spline_orient(orients, t0);
-		//Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
-		Pnt3f orient_t1 = spline_orient(orients, t1);
 
 		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-		//orient_t0_v = glm::normalize(orient_t0_v);
-		glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
-		//orient_t1_v = glm::normalize(orient_t1_v);
+		orient_t0_v = glm::normalize(orient_t0_v);
 
-		cout << "orient_t0_v: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
+		//cout << "orient_t0_v: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
 
 
 		float scale_value = 0.3;
@@ -812,256 +814,196 @@ void TrainView::draw_train(bool doingShadows) {
 }
 
 void TrainView::draw_track(bool doingShadows) {
-	for (int i = 0; i < m_pTrack->points.size(); ++i) {
+	//draw track with respect to my t_param and qt vectors data
+	for (int i = 0; i < t_param.size(); ++i) {
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
+
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
+
+		glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
+		offset_vec1 = glm::normalize(offset_vec1);
+		offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
+		glm::vec3 offset_vec2 = 1.5f * offset_vec1;
 
 
-		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
-		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
+		glm::vec3 left_track0 = qt0_v + offset_vec1;
+		glm::vec3 left_track1 = qt1_v + offset_vec1;
+		glm::vec3 left_track2 = qt1_v + offset_vec2;
+		glm::vec3 left_track3 = qt0_v + offset_vec2;
+		glm::vec3 right_track0 = qt0_v - offset_vec1;
+		glm::vec3 right_track1 = qt1_v - offset_vec1;
+		glm::vec3 right_track2 = qt1_v - offset_vec2;
+		glm::vec3 right_track3 = qt0_v - offset_vec2;
 
-		vector<Pnt3f> points = find_Cpoints(i);
+		glLineWidth(5);
 
-		float percent = 1.0f / DIVIDE_LINE;
-		float t0 = 0;
-		float t1 = t0 + 0.01;
-
-
-		int spline_type = tw->splineBrowser->value();
-
-
-
-		for (size_t j = 0; j < DIVIDE_LINE; j++) {
-			//if (t1 >= 1) {
-			//	t1 = 1;
-			//}
-			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
-
-			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
-			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
-			glm::vec3 forward = qt1_v - qt0_v;
-			forward = glm::normalize(forward);
-
-			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
-			Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
-
-			glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-			orient_t0_v = glm::normalize(orient_t0_v);
-			glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
-			orient_t1_v = glm::normalize(orient_t1_v);
-
-
-			glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
-			offset_vec1 = glm::normalize(offset_vec1);
-			offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
-			glm::vec3 offset_vec2 = 1.5f * offset_vec1;
-
-
-			glm::vec3 left_track0 = qt0_v + offset_vec1;
-			glm::vec3 left_track1 = qt1_v + offset_vec1;
-			glm::vec3 left_track2 = qt1_v + offset_vec2;
-			glm::vec3 left_track3 = qt0_v + offset_vec2;
-			glm::vec3 right_track0 = qt0_v - offset_vec1;
-			glm::vec3 right_track1 = qt1_v - offset_vec1;
-			glm::vec3 right_track2 = qt1_v - offset_vec2;
-			glm::vec3 right_track3 = qt0_v - offset_vec2;
-
-			glLineWidth(5);
-
-			//draw selected track type
-			if (tw->trackBrowser->value() == 1) {
-				//single track
-				glBegin(GL_LINES);
-				if (!doingShadows) {
-					glColor3ub(32, 32, 64);
-				}
-				glVertex3f(qt0_v.x, qt0_v.y, qt0_v.z);
-				glVertex3f(qt1_v.x, qt1_v.y, qt1_v.z);
-				glEnd();
+		//draw selected track type
+		if (tw->trackBrowser->value() == 1) {
+			//single track
+			glBegin(GL_LINES);
+			if (!doingShadows) {
+				glColor3ub(32, 32, 64);
 			}
-			else if (tw->trackBrowser->value() == 2) {
-				//left track
-				glBegin(GL_POLYGON);
-				unsigned r = 50;
-				unsigned g = 50;
-				unsigned b = 50;
-				if (!doingShadows) {
-					glColor3ub(r, g, b);
-				}
-				glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
-				glVertex3f(left_track0.x, left_track0.y, left_track0.z);
-				glVertex3f(left_track1.x, left_track1.y, left_track1.z);
-				glVertex3f(left_track2.x, left_track2.y, left_track2.z);
-				glVertex3f(left_track3.x, left_track3.y, left_track3.z);
-				glEnd();
-
-				//right track
-				glBegin(GL_POLYGON);
-				if (!doingShadows) {
-					glColor3ub(r, g, b);
-				}
-				glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
-				glVertex3f(right_track0.x, right_track0.y, right_track0.z);
-				glVertex3f(right_track1.x, right_track1.y, right_track1.z);
-				glVertex3f(right_track2.x, right_track2.y, right_track2.z);
-				glVertex3f(right_track3.x, right_track3.y, right_track3.z);
-				glEnd();
-			}
-			else if (tw->trackBrowser->value() == 3) {
-				float scale_value = 1.0f;
-				glm::mat4 scale = glm::mat4(1.0f);
-				scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
-
-				quat MyQuaternion = my_LookAt(forward, orient_t0_v);
-
-				mat4 RotationMatrix = glm::toMat4(MyQuaternion);
-				float rotateArray[16] = { 0.0 };
-				const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
-				for (int i = 0; i < 16; ++i)
-					rotateArray[i] = pSource[i];
-
-				float up_offset = -1.0f;
-
-				glm::mat4 trans = glm::mat4(1.0f);
-				trans = glm::translate(trans, qt0_v);
-				trans = glm::translate(trans, up_offset * orient_t0_v);
-
-				glPushMatrix();
-				glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
-				glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-				glMultMatrixf(rotateArray);
-				glRotatef(90.0f, 0, 1, 0);
-				glScalef(scale_value, scale_value, scale_value);
-
-				unsigned int r = 230;
-				unsigned int g = 180;
-				unsigned int b = 50;
-				if (!doingShadows) {
-					glColor3ub(r, g, b);
-				}
-
-				glBegin(GL_TRIANGLES);
-				for (int i = 0; i < my_track.vertices.size(); ++i) {
-
-					//glColor3f(0.5, 1, 0.8);
-					glm::vec4 vec(my_track.vertices[i].x, my_track.vertices[i].y, my_track.vertices[i].z, 1.0f);
-
-					//vec = trans * RotationMatrix *scale * vec;
-					glNormal3d(my_track.normals[i].x, my_track.normals[i].y, my_track.normals[i].z);
-					glVertex3f(vec.x, vec.y, vec.z);
-					//cout << vec.x << " " << vec.y << " " << vec.z << endl;
-
-				}
-				glEnd();
-				glPopMatrix();
-			}
-
-			glLineWidth(1);
-			t0 += percent;
-			t1 = t0 + 0.01;
+			glVertex3f(qt0_v.x, qt0_v.y, qt0_v.z);
+			glVertex3f(qt1_v.x, qt1_v.y, qt1_v.z);
+			glEnd();
 		}
+		else if (tw->trackBrowser->value() == 2) {
+			//left track
+			glBegin(GL_POLYGON);
+			unsigned r = 50;
+			unsigned g = 50;
+			unsigned b = 50;
+			if (!doingShadows) {
+				glColor3ub(r, g, b);
+			}
+			glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+			glVertex3f(left_track0.x, left_track0.y, left_track0.z);
+			glVertex3f(left_track1.x, left_track1.y, left_track1.z);
+			glVertex3f(left_track2.x, left_track2.y, left_track2.z);
+			glVertex3f(left_track3.x, left_track3.y, left_track3.z);
+			glEnd();
+
+			//right track
+			glBegin(GL_POLYGON);
+			if (!doingShadows) {
+				glColor3ub(r, g, b);
+			}
+			glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+			glVertex3f(right_track0.x, right_track0.y, right_track0.z);
+			glVertex3f(right_track1.x, right_track1.y, right_track1.z);
+			glVertex3f(right_track2.x, right_track2.y, right_track2.z);
+			glVertex3f(right_track3.x, right_track3.y, right_track3.z);
+			glEnd();
+		}
+		else if (tw->trackBrowser->value() == 3) {
+			float scale_value = 1.0f;
+			glm::mat4 scale = glm::mat4(1.0f);
+			scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
+
+			quat MyQuaternion = my_LookAt(forward, orient_t0_v);
+
+			mat4 RotationMatrix = glm::toMat4(MyQuaternion);
+			float rotateArray[16] = { 0.0 };
+			const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
+			for (int i = 0; i < 16; ++i)
+				rotateArray[i] = pSource[i];
+
+			float up_offset = -1.0f;
+
+			glm::mat4 trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, qt0_v);
+			trans = glm::translate(trans, up_offset * orient_t0_v);
+
+			glPushMatrix();
+			glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+			glMultMatrixf(rotateArray);
+			glRotatef(90.0f, 0, 1, 0);
+			glScalef(scale_value, scale_value, scale_value);
+
+			unsigned int r = 230;
+			unsigned int g = 180;
+			unsigned int b = 50;
+			if (!doingShadows) {
+				glColor3ub(r, g, b);
+			}
+
+			glBegin(GL_TRIANGLES);
+			for (int i = 0; i < my_track.vertices.size(); ++i) {
+
+				//glColor3f(0.5, 1, 0.8);
+				glm::vec4 vec(my_track.vertices[i].x, my_track.vertices[i].y, my_track.vertices[i].z, 1.0f);
+
+				//vec = trans * RotationMatrix *scale * vec;
+				glNormal3d(my_track.normals[i].x, my_track.normals[i].y, my_track.normals[i].z);
+				glVertex3f(vec.x, vec.y, vec.z);
+				//cout << vec.x << " " << vec.y << " " << vec.z << endl;
+
+			}
+			glEnd();
+			glPopMatrix();
+		}
+
+		glLineWidth(1);
 	}
 }
 
 void TrainView::draw_sleeper(bool doingShadows) {
-	for (int i = 0; i < m_pTrack->points.size(); ++i) {
+	float current_length = 0;
+	while (current_length < accumulate_length.back()) {
+		float current_t = length_to_t(current_length);
+		size_t i = length_to_index(current_length);
 
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
 
-		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
-		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
 
-		vector<Pnt3f> points = find_Cpoints(i);
+		glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
+		offset_vec1 = glm::normalize(offset_vec1);
+		offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
+		glm::vec3 offset_vec2 = 1.5f * offset_vec1;
+		
 
-		float percent = 1.0f / DIVIDE_LINE;
-		float t0 = 0;
-		float t1 = t0 + 0.01;
-
-		int counter = 0;
-
-		int spline_type = tw->splineBrowser->value();
-
-		for (size_t j = 0; j < DIVIDE_LINE; j++) {
-			
-			//if (t1 >= 1) {
-			//	t1 = 1;
-			//}
-			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
-
-			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
-			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
-			glm::vec3 forward = qt1_v - qt0_v;
-			forward = glm::normalize(forward);
-
-			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
-			Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
-
-			glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-			orient_t0_v = glm::normalize(orient_t0_v);
-			glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
-			orient_t1_v = glm::normalize(orient_t1_v);
-
-	
-
-			glLineWidth(5);
-
-			//draw selected track type
-			if (tw->trackBrowser->value() == 1) {
-				
-			}
-			else if ((tw->trackBrowser->value() == 2 || tw->trackBrowser->value() == 3) && counter % 8 == 0 ) {
-				float scale_value = 3.5f;
-				glm::mat4 scale = glm::mat4(1.0f);
-				scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
-
-				quat MyQuaternion = my_LookAt(forward, orient_t0_v);
-
-				mat4 RotationMatrix = glm::toMat4(MyQuaternion);
-				float rotateArray[16] = { 0.0 };
-				const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
-				for (int i = 0; i < 16; ++i)
-					rotateArray[i] = pSource[i];
-
-				glm::mat4 trans = glm::mat4(1.0f);
-				trans = glm::translate(trans, qt0_v);
-				trans = glm::translate(trans, 1.0f * -orient_t0_v);
-
-				glPushMatrix();
-				glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
-				float up_offset = -1.0f;
-				glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-				glMultMatrixf(rotateArray);
-				glRotatef(90.0f, 0, 1, 0);
-				glScalef(scale_value, scale_value, scale_value);
-
-				unsigned int r = 230;
-				unsigned int g = 180;
-				unsigned int b = 50;
-				if (!doingShadows) {
-					glColor3ub(r, g, b);
-				}
-
-				glBegin(GL_TRIANGLES);
-				for (int i = 0; i < my_sleeper.vertices.size(); ++i) {
-
-					//glColor3f(0.5, 1, 0.8);
-					glm::vec4 vec(my_sleeper.vertices[i].x, my_sleeper.vertices[i].y, my_sleeper.vertices[i].z, 1.0f);
-
-					//vec = trans * RotationMatrix *scale * vec;
-					glNormal3d(my_sleeper.normals[i].x, my_sleeper.normals[i].y, my_sleeper.normals[i].z);
-					glVertex3f(vec.x, vec.y, vec.z);
-					//cout << vec.x << " " << vec.y << " " << vec.z << endl;
-
-				}
-				glEnd();
-				glPopMatrix();
-			}
-
-			glLineWidth(1);
-
-
-			t0 += percent;
-			t1 = t0 + 0.01;
-			++counter;
+		//draw selected track type
+		if (tw->trackBrowser->value() == 1) {
+			//no sleepers
 		}
+		else if ((tw->trackBrowser->value() == 2 || tw->trackBrowser->value() == 3)) {
+			float scale_value = 3.5f;
+			glm::mat4 scale = glm::mat4(1.0f);
+			scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
+
+			quat MyQuaternion = my_LookAt(forward, orient_t0_v);
+
+			mat4 RotationMatrix = glm::toMat4(MyQuaternion);
+			float rotateArray[16] = { 0.0 };
+			const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
+			for (int i = 0; i < 16; ++i)
+				rotateArray[i] = pSource[i];
+
+			glm::mat4 trans = glm::mat4(1.0f);
+			trans = glm::translate(trans, qt0_v);
+			trans = glm::translate(trans, 1.0f * -orient_t0_v);
+
+			glPushMatrix();
+			glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+			float up_offset = -1.0f;
+			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+			glMultMatrixf(rotateArray);
+			glRotatef(90.0f, 0, 1, 0);
+			glScalef(scale_value, scale_value, scale_value);
+
+			unsigned int r = 230;
+			unsigned int g = 180;
+			unsigned int b = 50;
+			if (!doingShadows) {
+				glColor3ub(r, g, b);
+			}
+			glBegin(GL_TRIANGLES);
+			for (int i = 0; i < my_sleeper.vertices.size(); ++i) {
+				//glColor3f(0.5, 1, 0.8);
+				glm::vec4 vec(my_sleeper.vertices[i].x, my_sleeper.vertices[i].y, my_sleeper.vertices[i].z, 1.0f);
+
+				//vec = trans * RotationMatrix *scale * vec;
+				glNormal3d(my_sleeper.normals[i].x, my_sleeper.normals[i].y, my_sleeper.normals[i].z);
+				glVertex3f(vec.x, vec.y, vec.z);
+				//cout << vec.x << " " << vec.y << " " << vec.z << endl;
+			}
+			glEnd();
+			glPopMatrix();
+		}
+		current_length += 5;
 	}
+
 }
 
 void TrainView::set_train_light() {
@@ -1153,4 +1095,108 @@ void TrainView::set_train_light() {
 		glEnable(GL_LIGHT5);
 	}
 	
+}
+
+//update track data 
+void TrainView::update_arcLengh() {
+	size_t size = DIVIDE_LINE * m_pTrack->points.size();
+
+	glm::vec3 default_vec3(0, 0, 0);
+	t_param.assign(size, 0);
+	arc_length.assign(size, 0);
+	accumulate_length.assign(size, 0);
+	all_qt.assign(size, default_vec3);
+	all_orient.assign(size, default_vec3);
+	all_forward.assign(size, default_vec3);
+
+	//initialize t_param
+	for (int i = 0; i < size; ++i) {
+		int fraction = i % 100;
+		t_param[i] = float(fraction) / float(DIVIDE_LINE);
+		//cout << "i: " << i << "  t_param[i]: " << t_param[i] << endl;
+	}
+
+
+	//setup arcLength
+	for (int i = 0; i < m_pTrack->points.size(); ++i) {
+		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
+		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
+
+		vector<Pnt3f> points = find_Cpoints(i);
+
+		for (size_t j = 0; j < DIVIDE_LINE; j++) {
+			size_t current_index = i * DIVIDE_LINE  + j;
+			float t0 = t_param[current_index];
+
+			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
+
+			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
+			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
+			glm::vec3 forward = qt1_v - qt0_v;
+
+			//forward 可以改一下，遇到邊界無法跨度兩個線段
+			forward = glm::normalize(forward);
+
+			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+
+			glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
+			orient_t0_v = glm::normalize(orient_t0_v);
+
+			float length = glm::distance(qt0_v, qt1_v);
+			arc_length[current_index] = length;
+			if (current_index == 0) accumulate_length[current_index] = length;
+			else  accumulate_length[current_index] = accumulate_length[current_index - 1] + length;
+			all_qt[current_index] = qt0_v;
+			all_orient[current_index] = orient_t0_v;
+			all_forward[current_index] = forward;
+		}
+	}
+
+	//cout << "total length: " << accumulate_length[size - 1] << endl;
+}
+
+
+
+//use current length to find parameter t
+float TrainView::length_to_t(float length) {
+	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
+		if (length < accumulate_length[i]) {
+			return t_param[i];
+		}
+	}
+}
+
+//use current length to find current index
+size_t TrainView::length_to_index(float length) {
+	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
+		if (length < accumulate_length[i]) {
+			return i;
+		}
+	}
+}
+
+//use current parameter t to find current index
+size_t TrainView::trainU_to_index(float trainU) {
+	size_t index = (trainU / 1) * DIVIDE_LINE;
+
+	for (size_t i = 0; i < DIVIDE_LINE; ++i) {
+		if (trainU >= t_param[i]) index += i;
+	}
+	return index;
+}
+
+//match current length and trainU
+void TrainView::match_length() {
+	int index = 0;
+	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
+		if (m_pTrack->C_length < accumulate_length[i]) {
+			index = i;
+			break;
+		}
+	}
+
+	m_pTrack->trainU = (index / 1) + length_to_t(m_pTrack->C_length);
+	cout << "C_length: " << m_pTrack->C_length << endl;
+	cout << " trainU: " << m_pTrack->trainU << endl;
+
 }

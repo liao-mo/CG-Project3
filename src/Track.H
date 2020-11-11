@@ -48,6 +48,8 @@ class CTrack {
 		void readPoints(const char* filename);
 		void writePoints(const char* filename);
 
+		
+
 	public:
 		// rather than have generic objects, we make a special case for these few
 		// objects that we know that all implementations are going to need and that
@@ -60,4 +62,5 @@ class CTrack {
 		// the state of the train - basically, all I need to remember is where
 		// it is in parameter space
 		float trainU;
+		float C_length;
 };

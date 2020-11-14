@@ -112,8 +112,11 @@ class TrainView : public Fl_Gl_Window
 		//use current length to find current index
 		size_t length_to_index(float length);
 
-		//use trainU t to find current index
-		size_t trainU_to_index(float trainU);
+		//find current index by C_length
+		size_t C_length_index();
+
+		//find current index by trainU
+		size_t trainU_index();
 
 		//match current length and trainU
 		void match_length();

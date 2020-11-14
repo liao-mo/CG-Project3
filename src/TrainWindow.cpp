@@ -255,8 +255,12 @@ advanceTrain(float dir)
 
 	if (arcLength->value() == 1) {
 		trainView->m_pTrack->C_length += speed_val1;
-		if (trainView->m_pTrack->C_length > trainView->accumulate_length.back()) trainView->m_pTrack->C_length = 0;
+		if (trainView->m_pTrack->C_length >= trainView->accumulate_length.back()) {
+			trainView->m_pTrack->C_length = 0;
+			trainView->m_pTrack->trainU = 0;
+		} 
 		trainView->match_length();
+
 	}
 	else {
 		trainView->m_pTrack->trainU += speed_val0;

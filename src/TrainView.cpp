@@ -370,6 +370,7 @@ void TrainView::draw()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	setProjection();		// put the code to set up matrices here
+	update_arcLengh(); //initial arc length here
 
 	//######################################################################
 	// TODO: 
@@ -436,7 +437,7 @@ void TrainView::draw()
 
 	setupFloor();
 	//glDisable(GL_LIGHTING);
-	drawFloor(200, 10);
+	drawFloor(1600, 50);
 
 
 	//*********************************************************************
@@ -500,35 +501,24 @@ setProjection()
 	//####################################################################
 	
 	else {
-		
-		int Cp = m_pTrack->trainU / 1;
+		size_t i;
+		if (tw->arcLength->value() == 0) {
+			i = trainU_index();
+		}
+		else {
+			i = C_length_index();
+		}
+		float t0 = t_param[i];
 
-		vector<Pnt3f> points = find_Cpoints(Cp);
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
 
-		float t0 = m_pTrack->trainU - Cp;
-		float t1 = t0 + 0.01;
-		//if (t1 >= 1) {
-		//	t1 = 1;
-		//}
-
-		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
-
-
-		glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
-		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
-		glm::vec3 forward = qt1_v - qt0_v;
-		forward = glm::normalize(forward);
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
 
 
-		Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
-		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
-
-		Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
-
-		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-		orient_t0_v = glm::normalize(orient_t0_v);
-
-		
 		float FPV_up_value = 10.0f;
 		float TPV_up_value = 20.0f;
 		float TPV_backward_value = 30.0f;
@@ -566,9 +556,9 @@ setProjection()
 				center.x,
 				center.y,
 				center.z,
-				orient_t0.x,
-				orient_t0.y,
-				orient_t0.z
+				orient_t0_v.x,
+				orient_t0_v.y,
+				orient_t0_v.z
 			);
 		}
 		else if (tw->TPV->value() == 1) {
@@ -589,9 +579,9 @@ setProjection()
 				center.x,
 				center.y,
 				center.z,
-				orient_t0.x,
-				orient_t0.y,
-				orient_t0.z
+				orient_t0_v.x,
+				orient_t0_v.y,
+				orient_t0_v.z
 			);
 		}
 		
@@ -717,50 +707,29 @@ void TrainView::draw_train(bool doingShadows) {
 #endif // DEBUG
 
 	if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
-		//size_t i = trainU_to_index(m_pTrack->trainU);
-		//float current_t = t_param[i];
+		size_t i;
+		if (tw->arcLength->value() == 0) {
+			i = trainU_index();
+		}
+		else {
+			i = C_length_index();
+		}
+		float t0 = t_param[i]; 
 
-		//glm::vec3 qt0_v = all_qt[i];
-		//glm::vec3 qt1_v;
-		//if (i == t_param.size() - 1) qt1_v = all_qt[0];
-		//else qt1_v = all_qt[i + 1];
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
 
-		//glm::vec3 orient_t0_v = all_orient[i];
-		//glm::vec3 forward = all_forward[i];
-
-
-		int Cp = m_pTrack->trainU / 1;
-
-
-		vector<Pnt3f> points = find_Cpoints(Cp);
-
-		float t0 = m_pTrack->trainU - Cp;
-		float t1 = t0 + 0.01;
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
 #ifdef DEBUG
 		//cout << "t0: " << t0 << endl;
 		//cout << "trainU: " << m_pTrack->trainU << endl;
 #endif // DEBUG
 
-		vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
-		vector<Pnt3f> orients = find_orient_vectors(Cp);
-
-		glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
-		glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
-		glm::vec3 forward = qt1_v - qt0_v;
 		//cout << "forward length: " << glm::length(forward) << endl;
 		//cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
-		
-		forward = glm::normalize(forward);
-
-
-		Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
-		Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
-
-		Pnt3f orient_t0 = spline_orient(orients, t0);
-
-		glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-		orient_t0_v = glm::normalize(orient_t0_v);
-
 		//cout << "orient_t0_v: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
 
 
@@ -776,15 +745,28 @@ void TrainView::draw_train(bool doingShadows) {
 		for (int i = 0; i < 16; ++i)
 			rotateArray[i] = pSource[i];
 
+		mat4 rotate = glm::inverse(glm::lookAt(
+			qt0_v,
+			qt1_v,
+			orient_t0_v));
+		float rotateArray2[16] = { 0.0 };
+		const float* pSource2 = (const float*)glm::value_ptr(rotate);
+		for (int i = 0; i < 16; ++i)
+			rotateArray2[i] = pSource2[i];
+
 		glm::mat4 trans = glm::mat4(1.0f);
 		trans = glm::translate(trans, qt0_v);
 		trans = glm::translate(trans, 10.0f* orient_t0_v);
 
 		glPushMatrix();
-		glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+
+		//wtf???
+		//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
 		float up_offset = 0.0f;
-		glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-		glMultMatrixf(rotateArray);
+		//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+		//glMultMatrixf(rotateArray);
+		glMultMatrixf(rotateArray2);
+
 		glScalef(scale_value, scale_value, scale_value);
 
 		unsigned int r = 200;
@@ -970,15 +952,25 @@ void TrainView::draw_sleeper(bool doingShadows) {
 			for (int i = 0; i < 16; ++i)
 				rotateArray[i] = pSource[i];
 
+			mat4 rotate = glm::inverse(glm::lookAt(
+				qt0_v,
+				qt1_v,
+				orient_t0_v));
+			float rotateArray2[16] = { 0.0 };
+			const float* pSource2 = (const float*)glm::value_ptr(rotate);
+			for (int i = 0; i < 16; ++i)
+				rotateArray2[i] = pSource2[i];
+
 			glm::mat4 trans = glm::mat4(1.0f);
 			trans = glm::translate(trans, qt0_v);
 			trans = glm::translate(trans, 1.0f * -orient_t0_v);
 
 			glPushMatrix();
-			glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
 			float up_offset = -1.0f;
-			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-			glMultMatrixf(rotateArray);
+			//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+			//glMultMatrixf(rotateArray);
+			glMultMatrixf(rotateArray2);
 			glRotatef(90.0f, 0, 1, 0);
 			glScalef(scale_value, scale_value, scale_value);
 
@@ -1007,42 +999,28 @@ void TrainView::draw_sleeper(bool doingShadows) {
 }
 
 void TrainView::set_train_light() {
-	int Cp = m_pTrack->trainU / 1;
+	size_t i = C_length_index();
+	float t0 = t_param[i];
 
-	vector<Pnt3f> points = find_Cpoints(Cp);
+	glm::vec3 qt0_v3 = all_qt[i];
+	glm::vec3 qt1_v3;
+	if (i == t_param.size() - 1) qt1_v3 = all_qt[0];
+	else qt1_v3 = all_qt[i + 1];
 
-	float t0 = m_pTrack->trainU - Cp;
-	float t1 = t0 + 0.01;
-	//if (t1 >= 1) {
-	//	t1 = 1;
-	//}
+	glm::vec3 orient_t0_v = all_orient[i];
+	glm::vec3 forward = all_forward[i];
 
-	vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
-
-	glm::vec4 qt0_v(qts[0].x, qts[0].y, qts[0].z, 1);
-	glm::vec4 qt1_v(qts[1].x, qts[1].y, qts[1].z, 1);
-	glm::vec3 forward = qt1_v - qt0_v;
-	forward = glm::normalize(forward);
-
-
-	Pnt3f cp_orient_p0 = m_pTrack->points[Cp].orient;
-	Pnt3f cp_orient_p1 = m_pTrack->points[(Cp + 1) % m_pTrack->points.size()].orient;
-
-	Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
-	Pnt3f orient_t1 = find_orient(cp_orient_p0, cp_orient_p1, t1);
-
-	glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
-	orient_t0_v = glm::normalize(orient_t0_v);
-	glm::vec3 orient_t1_v(orient_t1.x, orient_t1.y, orient_t1.z);
-	orient_t1_v = glm::normalize(orient_t1_v);
+	glm::vec4 qt0_v4(qt0_v3.x, qt0_v3.y, qt0_v3.z, 1);
+	glm::vec4 qt1_v4(qt1_v3.x, qt1_v3.y, qt1_v3.z, 1);
 
 	glm::mat4 trans = glm::mat4(1.0f);
 	trans = glm::translate(trans, 5.0f * orient_t0_v);
-	qt0_v = trans * qt0_v;
+	trans = glm::translate(trans, 5.0f * forward);
+	qt0_v4 = trans * qt0_v4;
 
 	float ambient[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	float diffuse[] = { 0.9f, 0.3f, 0.3f, 1.0f };
-	float position[] = { qt0_v.x, qt0_v.y, qt0_v.z, 1.0f };
+	float diffuse[] = { 0.9f, 0.9f, 0.8f, 1.0f };
+	float position[] = { qt0_v4.x, qt0_v4.y, qt0_v4.z, 1.0f };
 
 	//float position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
 	float direction[] = { forward.x, forward.y, forward.z };
@@ -1073,9 +1051,9 @@ void TrainView::set_train_light() {
 	//spot direction
 	glLightfv(GL_LIGHT5, GL_SPOT_DIRECTION, direction);
 	//angle of the clone
-	glLightf(GL_LIGHT5, GL_SPOT_CUTOFF, 30.0f);
+	glLightf(GL_LIGHT5, GL_SPOT_CUTOFF, 45.0f);
 	//concentration of the light
-	glLightf(GL_LIGHT5, GL_SPOT_EXPONENT, 0.1f);
+	glLightf(GL_LIGHT5, GL_SPOT_EXPONENT, 25.0);
 
 	//light attenuation
 	glLightf(GL_LIGHT5, GL_CONSTANT_ATTENUATION, 0.05f);
@@ -1164,38 +1142,48 @@ float TrainView::length_to_t(float length) {
 			return t_param[i];
 		}
 	}
+	return t_param.back();
 }
 
-//use current length to find current index
+//use given length to find current index
 size_t TrainView::length_to_index(float length) {
 	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
 		if (length < accumulate_length[i]) {
 			return i;
 		}
 	}
+	return accumulate_length.size() - 1;
 }
 
-//use current parameter t to find current index
-size_t TrainView::trainU_to_index(float trainU) {
-	size_t index = (trainU / 1) * DIVIDE_LINE;
-
-	for (size_t i = 0; i < DIVIDE_LINE; ++i) {
-		if (trainU >= t_param[i]) index += i;
-	}
-	return index;
-}
-
-//match current length and trainU
-void TrainView::match_length() {
-	int index = 0;
+//find current parameter t by C_length
+size_t TrainView::C_length_index() {
+	int index = -1;
 	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
 		if (m_pTrack->C_length < accumulate_length[i]) {
 			index = i;
 			break;
 		}
 	}
+	if (index == -1) {
+		index = accumulate_length.size() - 1;
+	}
+	return index;
+}
 
-	m_pTrack->trainU = (index / 1) + length_to_t(m_pTrack->C_length);
+//find current index by trainU
+size_t TrainView::trainU_index() {
+	int index = int(m_pTrack->trainU / 1) * DIVIDE_LINE;
+	index = index + (m_pTrack->trainU - int(m_pTrack->trainU / 1)) * DIVIDE_LINE;
+	return index;
+}
+
+//match current length and trainU
+void TrainView::match_length() {
+	int index = C_length_index();
+
+	m_pTrack->trainU = (index / DIVIDE_LINE) + length_to_t(m_pTrack->C_length);
+	cout << "index: " << index << endl;
+	cout << "length_to_t(m_pTrack->C_length): " << length_to_t(m_pTrack->C_length) << endl;
 	cout << "C_length: " << m_pTrack->C_length << endl;
 	cout << " trainU: " << m_pTrack->trainU << endl;
 

@@ -114,27 +114,36 @@ void drawFloor(float size, int nSquares)
 //===============================================================================
 {
 	// parameters:
-	float maxX = size/2, maxY = size/2;
-	float minX = -size/2, minY = -size/2;
+	float maxX = size / 2, maxY = size / 2;
+	float minX = -size / 2, minY = -size / 2;
 
-	int x,y,v[3],i;
-	float xp,yp,xd,yd;
+	int x, y, v[3], i;
+	float xp, yp, xd, yd;
 	v[2] = 0;
-	xd = (maxX - minX) / ((float) nSquares);
-	yd = (maxY - minY) / ((float) nSquares);
+	xd = (maxX - minX) / ((float)nSquares);
+	yd = (maxY - minY) / ((float)nSquares);
 	glBegin(GL_QUADS);
-	for(x=0,xp=minX; x<nSquares; x++,xp+=xd) {
-		for(y=0,yp=minY,i=x; y<nSquares; y++,i++,yp+=yd) {
-			glColor4fv(i%2==1 ? floorColor1:floorColor2);
-			glNormal3f(0, 1, 0); 
-			glVertex3d(xp,      0, yp);
-			glVertex3d(xp,      0, yp + yd);
+	for (x = 0, xp = minX; x < nSquares; x++, xp += xd) {
+		for (y = 0, yp = minY, i = x; y < nSquares; y++, i++, yp += yd) {
+			glColor4fv(i % 2 == 1 ? floorColor1 : floorColor2);
+			glNormal3f(0, 1, 0);
+			glVertex3d(xp, 0, yp);
+			glVertex3d(xp, 0, yp + yd);
 			glVertex3d(xp + xd, 0, yp + yd);
 			glVertex3d(xp + xd, 0, yp);
 
 		} // end of for j
 	}// end of for i
 	glEnd();
+
+	//glBegin(GL_QUADS);
+	//glColor4fv(floorColor2);
+	//glNormal3f(0, 1, 0);
+	//glVertex3d(minX, 0, minY);
+	//glVertex3d(maxX, 0, minY);
+	//glVertex3d(maxX, 0, maxY);
+	//glVertex3d(minX, 0, maxY);
+	//glEnd();
 }
 
 //*************************************************************************

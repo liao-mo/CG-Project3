@@ -1,5 +1,10 @@
 # CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
+## 2020/11/15
+
+修復上下顛倒時枕木歪掉的問題，利用glm::iverse(glm::lookAt)就可以了，而且還不用translate，這我就不知道為什麼了
+完成Arc Length，用多個vector儲存每個點的資料，依照那些資料去畫出鐵軌與在上面的東西
+
 ## 2020/11/8
 
 成功Load出obj物件，要把網路上載的東東，丟到blender在匯出來就可以用了

@@ -121,9 +121,9 @@ std::vector<Pnt3f> TrainView::find_orient_vectors(int currentPoint) {
 TrainView::
 TrainView(int x, int y, int w, int h, const char* l)
 	: Fl_Gl_Window(x, y, w, h, l),
-	my_train("./TrackFiles/train2.obj"),
+	my_train("./TrackFiles/train3.obj"),
 	my_sleeper("./TrackFiles/sleeper.obj"),
-	my_track("./TrackFiles/track.obj"),
+	my_track("./TrackFiles/cilinder.obj"),
 	my_car("./TrackFiles/cube.obj"),
 	num_of_car(0)
 	//========================================================================
@@ -663,17 +663,9 @@ void TrainView::draw_train(bool doingShadows) {
 
 		glm::vec3 orient_t0_v = all_orient[i];
 		glm::vec3 forward = all_forward[i];
-#ifdef DEBUG
-		//cout << "t0: " << t0 << endl;
-		//cout << "trainU: " << m_pTrack->trainU << endl;
-#endif // DEBUG
-
-		//cout << "forward length: " << glm::length(forward) << endl;
-		//cout << "forward: " << forward.x << " " << forward.y << " " << forward.z << endl;
-		//cout << "orient_t0_v: " << orient_t0_v.x << " " << orient_t0_v.y << " " << orient_t0_v.z << endl;
 
 
-		float scale_value = 0.3;
+		float scale_value = 0.1;
 		glm::mat4 scale = glm::mat4(1.0f);
 		scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
 
@@ -706,7 +698,7 @@ void TrainView::draw_train(bool doingShadows) {
 		//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
 		//glMultMatrixf(rotateArray);
 		glMultMatrixf(rotateArray2);
-
+		glRotated(180, 0, 1, 0);
 		glScalef(scale_value, scale_value, scale_value);
 
 		unsigned int r = 200;
@@ -792,8 +784,8 @@ void TrainView::draw_car(bool doingShadows, float backward_offset) {
 
 		//wtf???
 		//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
-		float up_offset = 0.0f;
-		//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+		float up_offset = 5.0f;
+		glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
 		//glMultMatrixf(rotateArray);
 		glMultMatrixf(rotateArray2);
 
@@ -901,7 +893,7 @@ void TrainView::draw_track(bool doingShadows) {
 			glEnd();
 		}
 		else if (tw->trackBrowser->value() == 3) {
-			float scale_value = 1.0f;
+			float scale_value = 0.5f;
 			glm::mat4 scale = glm::mat4(1.0f);
 			scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
 
@@ -913,22 +905,37 @@ void TrainView::draw_track(bool doingShadows) {
 			for (int i = 0; i < 16; ++i)
 				rotateArray[i] = pSource[i];
 
-			float up_offset = -1.0f;
+			mat4 rotate = glm::inverse(glm::lookAt(
+				qt0_v,
+				qt1_v,
+				orient_t0_v));
+			float rotateArray2[16] = { 0.0 };
+			const float* pSource2 = (const float*)glm::value_ptr(rotate);
+			for (int i = 0; i < 16; ++i)
+				rotateArray2[i] = pSource2[i];
 
-			glm::mat4 trans = glm::mat4(1.0f);
-			trans = glm::translate(trans, qt0_v);
-			trans = glm::translate(trans, up_offset * orient_t0_v);
+			float up_offset = -0.3f;
+			glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
+			side_offset_v = glm::normalize(side_offset_v);
+			side_offset_v *= 1.5f;
+
+			//glm::mat4 trans = glm::mat4(1.0f);
+			//trans = glm::translate(trans, qt0_v);
+			//trans = glm::translate(trans, up_offset * orient_t0_v);
+			//trans = glm::translate(trans, side_offset_v*1.0f);
+
 
 			glPushMatrix();
-			glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
 			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-			glMultMatrixf(rotateArray);
+			//glTranslated(side_offset_v.x, side_offset_v.y,side_offset_v.z);
+			glMultMatrixf(rotateArray2);
 			glRotatef(90.0f, 0, 1, 0);
 			glScalef(scale_value, scale_value, scale_value);
 
-			unsigned int r = 230;
-			unsigned int g = 180;
-			unsigned int b = 50;
+			unsigned int r = 89;
+			unsigned int g = 58;
+			unsigned int b = 5;
 			if (!doingShadows) {
 				glColor3ub(r, g, b);
 			}
@@ -936,15 +943,18 @@ void TrainView::draw_track(bool doingShadows) {
 			glBegin(GL_TRIANGLES);
 			for (int i = 0; i < my_track.vertices.size(); ++i) {
 
-				//glColor3f(0.5, 1, 0.8);
 				glm::vec4 vec(my_track.vertices[i].x, my_track.vertices[i].y, my_track.vertices[i].z, 1.0f);
 
-				//vec = trans * RotationMatrix *scale * vec;
 				glNormal3d(my_track.normals[i].x, my_track.normals[i].y, my_track.normals[i].z);
 				glVertex3f(vec.x, vec.y, vec.z);
-				//cout << vec.x << " " << vec.y << " " << vec.z << endl;
 
 			}
+
+
+
+
+
+
 			glEnd();
 			glPopMatrix();
 		}
@@ -1005,8 +1015,8 @@ void TrainView::draw_sleeper(bool doingShadows) {
 
 			glPushMatrix();
 			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
-			float up_offset = -1.0f;
-			//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+			float up_offset = -1.5f;
+			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
 			//glMultMatrixf(rotateArray);
 			glMultMatrixf(rotateArray2);
 			glRotatef(90.0f, 0, 1, 0);

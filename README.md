@@ -1,5 +1,11 @@
 # CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
+## 2020/11/16
+
+蓋出多個火車車廂，把目前火車頭的位置往後移，offset一個值去算車廂的位置
+把單軌的立體鐵軌弄出來，之前不行是因為.obj在blender上要設定一個匯出的參數
+應該是叫做vertex order
+
 ## 2020/11/15
 
 修復上下顛倒時枕木歪掉的問題，利用glm::iverse(glm::lookAt)就可以了，而且還不用translate，這我就不知道為什麼了

@@ -94,6 +94,12 @@ class TrainView : public Fl_Gl_Window
 
 		//my function that draws the sleeper
 		void draw_sleeper(bool doingShadows);
+
+		//my function that draws my ground
+		void draw_ground();
+
+		//my function that draws my env models
+		void draw_env_model(bool doingShadows);
 		
 
 
@@ -130,6 +136,9 @@ class TrainView : public Fl_Gl_Window
 		//match current length and trainU
 		void match_length();
 
+		//match current trainU to length 
+		void match_trainU();
+
 
 	public:
 		ArcBallCam		arcball;			// keep an ArcBall for the UI
@@ -140,9 +149,14 @@ class TrainView : public Fl_Gl_Window
 		TrainModel my_train;			//my train model
 		TrainModel my_sleeper;			//my train model
 		TrainModel my_track;			//my train model
-		TrainModel my_car;
+		TrainModel my_car;				//my car model
+		TrainModel my_ground;				//my car model
+
+		std::vector<TrainModel> env_models; //all other static models
 		unsigned int num_of_car;
-		std::chrono::system_clock::time_point start = std::chrono::system_clock::now(); //start time
+		std::chrono::system_clock::time_point start_time = std::chrono::system_clock::now(); //start time
+		std::chrono::system_clock::time_point current_time = std::chrono::system_clock::now(); //current time
+		std::chrono::duration<double> elapsed_seconds;
 
 		unsigned int VAO;
 		unsigned int VBO;

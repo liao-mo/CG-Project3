@@ -271,11 +271,11 @@ advanceTrain(float dir)
 	}
 	else {
 		trainView->m_pTrack->trainU += speed_val0;
-
+		trainView->match_trainU();
 	}
 
 	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size() - 0.01) {
-		trainView->m_pTrack->trainU -= trainView->m_pTrack->points.size();
+		trainView->m_pTrack->trainU = 0;
 	}
 
 

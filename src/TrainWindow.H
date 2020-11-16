@@ -34,6 +34,7 @@
 #include <Fl/Fl_Group.H>
 #include <Fl/Fl_Value_Slider.H>
 #include <Fl/Fl_Browser.H>
+#include <Fl/Fl_Value_Input.H>
 #pragma warning(pop)
 
 // we need to know what is in the world to show
@@ -93,6 +94,12 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Value_Slider*	speed;
 		Fl_Button*			arcLength;		// do we use arc length for speed?
 		Fl_Button* envLight; // do we want environment lighting?
+
+
+		// add a car
+		Fl_Button* add_car;
+		// delete a car
+		Fl_Button* delete_car;
 
 		// we have other widgets as part of the sample solution
 		// this is not for 559 students to know about

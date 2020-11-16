@@ -191,6 +191,13 @@ TrainWindow(const int x, const int y)
 
 		pty += 30;
 
+		//add a car
+		add_car = new Fl_Button(605, pty, 80, 20, "Add car");
+		add_car->callback((Fl_Callback*)addCar, this);
+		//delete a car
+		delete_car = new Fl_Button(700, pty, 80, 20, "Delete car");
+		delete_car->callback((Fl_Callback*)delCar, this);
+
 		// TODO: add widgets for all of your fancier features here
 #ifdef EXAMPLE_SOLUTION
 		makeExampleWidgets(this,pty);

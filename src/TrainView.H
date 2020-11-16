@@ -46,6 +46,7 @@ class CTrack;
 #pragma warning(disable:4312)
 #pragma warning(disable:4311)
 #include <Fl/Fl_Gl_Window.h>
+
 #pragma warning(pop)
 
 // this uses the old ArcBall Code
@@ -53,6 +54,8 @@ class CTrack;
 #include "Utilities/Pnt3f.H"
 #include "TrainModel.h"
 #include <vector>
+#include <chrono>
+#include <ctime>   
 
 // Include GLM
 #include <glm/glm.hpp>
@@ -83,12 +86,18 @@ class TrainView : public Fl_Gl_Window
 		//my function that draws the train
 		void draw_train(bool doingShadows);
 
+		//my function that draws the car
+		void draw_car(bool doingShadows, float backward_offset);
+
 		//my function that draws the track
 		void draw_track(bool doingShadows);
 
 		//my function that draws the sleeper
 		void draw_sleeper(bool doingShadows);
 		
+
+
+
 
 		// setup the projection - assuming that the projection stack has been
 		// cleared for you
@@ -131,6 +140,9 @@ class TrainView : public Fl_Gl_Window
 		TrainModel my_train;			//my train model
 		TrainModel my_sleeper;			//my train model
 		TrainModel my_track;			//my train model
+		TrainModel my_car;
+		unsigned int num_of_car;
+		std::chrono::system_clock::time_point start = std::chrono::system_clock::now(); //start time
 
 		unsigned int VAO;
 		unsigned int VBO;

@@ -248,3 +248,18 @@ void rmzCB(Fl_Widget*, TrainWindow* tw)
 	rollz(tw, -1);
 }
 
+//add a car
+void addCar(Fl_Widget*, TrainWindow* tw)
+{
+	tw->trainView->num_of_car += 1;
+	tw->damageMe();
+}
+
+//delete a car
+void delCar(Fl_Widget*, TrainWindow* tw)
+{
+	if (tw->trainView->num_of_car > 0) {
+		tw->trainView->num_of_car -= 1;
+	}
+	tw->damageMe();
+}

@@ -131,11 +131,11 @@ TrainView(int x, int y, int w, int h, const char* l)
 {
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 	resetArcball();
-	TrainModel airplane("./TrackFiles/train2.obj");
+	TrainModel airplane("./TrackFiles/airplane.obj");
 	env_models.push_back(airplane);
 
-	TrainModel bridge("./TrackFiles/bridge.obj");
-	env_models.push_back(bridge);
+	TrainModel tunnel("./TrackFiles/tunnel.obj");
+	env_models.push_back(tunnel);
 }
 
 
@@ -250,88 +250,7 @@ void TrainView::draw()
 	if (gladLoadGL())
 	{
 		//initiailize VAO, VBO, Shader...
-		const char* vertexShaderSource = "#version 330 core\n"
-			"layout (location = 0) in vec3 aPos;\n"
-			"void main()\n"
-			"{\n"
-			"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-			"}\0";
-
-		const char* fragmentShaderSource = "#version 330 core\n"
-			"out vec4 FragColor;\n"
-			"void main()\n"
-			"{\n"
-			"   FragColor = vec4(0.317, 0.941, 0.490, 1.0);\n"
-			"}\0";
-
-		unsigned int vertexShader;
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-		glCompileShader(vertexShader);
-		int  success;
-		char infoLog[512];
-		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-		if (!success)
-		{
-			glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-			std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-		}
-
-		unsigned int fragmentShader;
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-		glCompileShader(fragmentShader);
-		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-		if (!success)
-		{
-			glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-			std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-		}
-
 		
-		shaderProgram = glCreateProgram();
-		glAttachShader(shaderProgram, vertexShader);
-		glAttachShader(shaderProgram, fragmentShader);
-		glLinkProgram(shaderProgram);
-		glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-		if (!success) {
-			glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-			std::cout << "ERROR::SHADER::LINK_FAILED\n" << infoLog << std::endl;
-		}
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
-
-
-		float vertices[] = {
-		0.5f,  0.5f, 0.0f,  // top right
-		0.5f, -0.5f, 0.0f,  // bottom right
-		-0.5f, -0.5f, 0.0f,  // bottom left
-		-0.5f,  0.5f, 0.0f   // top left 
-		};
-
-		unsigned int indices[] = {  // note that we start from 0!
-		0, 1, 3,  // first Triangle
-		1, 2, 3   // second Triangle
-		};
-
-		glGenVertexArrays(1, &VAO);
-		glBindVertexArray(VAO);
-
-		glGenBuffers(1, &VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-		glGenBuffers(1, &EBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-
-
 	}
 	else
 		throw std::runtime_error("Could not initialize GLAD!");
@@ -378,22 +297,28 @@ void TrainView::draw()
 		if (tw->envLight->value() == 1) {
 			glEnable(GL_LIGHT1);
 			glEnable(GL_LIGHT2);
+			glEnable(GL_LIGHT6);
 		}
 		else {
 			glDisable(GL_LIGHT1);
 			glDisable(GL_LIGHT2);
+			glDisable(GL_LIGHT6);
 		}
 	}
 
 
 	// * set the light parameters
-	GLfloat lightPosition1[] = { 0, 100, 50, 0 }; // {50, 200.0, 50, 1.0};
-	GLfloat lightPosition2[] = { 100, 150, 0, 0 };
-	GLfloat lightPosition3[] = { 50, 100, 50, 0 };
+	GLfloat lightPosition1[] = { 0, 5000, 5000, 0 }; // {50, 200.0, 50, 1.0};
+	GLfloat lightPosition2[] = { 10000, 5000, 0, 0 };
+	GLfloat lightPosition3[] = { 5000, 10000, 5000, 0 };
+	GLfloat lightPosition6[] = { -300, 300, -300, 1 };
 	GLfloat yellowLight[] = { 0.3f, 0.3f, .05f, 1.0 };
-	GLfloat whiteLight[] = { 0.5f, 0.5f, 0.5f, 1.0 };
+	GLfloat whiteLight[] = { 0.8f, 0.8f, 0.8f, 1.0 }; 
 	GLfloat blueLight[] = { .1f,.1f,.3f,1.0 };
+	GLfloat whiteLight2[] = { .8f,.8f,.7f,1.0 };
+	
 	GLfloat grayLight[] = { .1f, .1f, .1f, 1.0 };
+	float direction[] = { 1,-1,1 };
 
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition1);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, whiteLight);
@@ -406,6 +331,23 @@ void TrainView::draw()
 	glLightfv(GL_LIGHT2, GL_POSITION, lightPosition3);
 	glLightfv(GL_LIGHT2, GL_DIFFUSE, blueLight);
 
+	//spot light
+	glLightfv(GL_LIGHT6, GL_AMBIENT, grayLight);
+	glLightfv(GL_LIGHT6, GL_DIFFUSE, whiteLight2);
+	glLightfv(GL_LIGHT6, GL_POSITION, lightPosition6);
+
+	//spot direction
+	glLightfv(GL_LIGHT6, GL_SPOT_DIRECTION, direction);
+	//angle of the clone
+	glLightf(GL_LIGHT6, GL_SPOT_CUTOFF, 30.0);
+	//concentration of the light
+	glLightf(GL_LIGHT6, GL_SPOT_EXPONENT, 25.0);
+
+	//light attenuation
+	glLightf(GL_LIGHT6, GL_CONSTANT_ATTENUATION, 0.2f);
+	glLightf(GL_LIGHT6, GL_LINEAR_ATTENUATION, 0.0f);
+	glLightf(GL_LIGHT6, GL_QUADRATIC_ATTENUATION, 0.0f);
+
 	set_train_light();
 
 	// now draw the ground plane
@@ -416,8 +358,8 @@ void TrainView::draw()
 	setupFloor();
 	//glDisable(GL_LIGHTING);
 	//drawFloor(1600, 50);
-	draw_ground();
 
+	draw_ground();
 
 	// now draw the object and we need to do it twice
 	// once for real, and then once for shadows
@@ -1003,12 +945,12 @@ void TrainView::draw_sleeper(bool doingShadows) {
 }
 
 void TrainView::draw_ground() {
-	float scale_value = 50.0f;
+	float scale_value = 5.0;
 	unsigned int r = 50;
 	unsigned int g = 255;
 	unsigned int b = 150;
 	glPushMatrix();
-	glTranslated(0, -200.0, 0);
+	glTranslated(0, -0, 0);
 	glScalef(scale_value, scale_value, scale_value);
 	glColor3ub(r, g, b);
 
@@ -1027,8 +969,8 @@ void TrainView::draw_ground() {
 void TrainView::draw_env_model(bool doingShadows) {
 	float scale_value =5.0f;
 	unsigned int r = 150;
-	unsigned int g = 150;
-	unsigned int b = 150;
+	unsigned int g = 50;
+	unsigned int b = 130;
 
 	glPushMatrix();
 	glTranslated(0, 70.0, 0);
@@ -1047,10 +989,13 @@ void TrainView::draw_env_model(bool doingShadows) {
 	glEnd();
 	glPopMatrix();
 
-	scale_value = 1.0f;
+	scale_value = 5.0f;
 	glPushMatrix();
-	glTranslated(10, 0.0, 0);
+	glTranslated(300, 0.0, 0);
 	glScalef(scale_value, scale_value, scale_value);
+	r = 58;
+	g = 85;
+	b = 169;
 	if (!doingShadows) {
 		glColor3ub(r, g, b);
 	}

@@ -1,5 +1,9 @@
 # CG-Project3 圖學導論project 3 Trains and Roller Coasters
 
+## 2020/11/17
+
+用blender做出地形和tunnel，放到我的地圖中
+
 ## 2020/11/16
 
 蓋出多個火車車廂，把目前火車頭的位置往後移，offset一個值去算車廂的位置

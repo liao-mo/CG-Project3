@@ -125,14 +125,17 @@ TrainView(int x, int y, int w, int h, const char* l)
 	my_sleeper("./TrackFiles/sleeper.obj"),
 	my_track("./TrackFiles/cilinder.obj"),
 	my_car("./TrackFiles/cube.obj"),
-	my_ground("./TrackFiles/Mt.Fuji.obj"),
+	my_ground("./TrackFiles/ground.obj"),
 	num_of_car(0)
 	//========================================================================
 {
 	mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 	resetArcball();
-	TrainModel airplane("./TrackFiles/airplane.obj");
+	TrainModel airplane("./TrackFiles/train2.obj");
 	env_models.push_back(airplane);
+
+	TrainModel bridge("./TrackFiles/bridge.obj");
+	env_models.push_back(bridge);
 }
 
 
@@ -384,9 +387,9 @@ void TrainView::draw()
 
 
 	// * set the light parameters
-	GLfloat lightPosition1[] = { 0, 1, 1, 0 }; // {50, 200.0, 50, 1.0};
-	GLfloat lightPosition2[] = { 1, 0, 0, 0 };
-	GLfloat lightPosition3[] = { 0, -1, 0, 0 };
+	GLfloat lightPosition1[] = { 0, 100, 50, 0 }; // {50, 200.0, 50, 1.0};
+	GLfloat lightPosition2[] = { 100, 150, 0, 0 };
+	GLfloat lightPosition3[] = { 50, 100, 50, 0 };
 	GLfloat yellowLight[] = { 0.3f, 0.3f, .05f, 1.0 };
 	GLfloat whiteLight[] = { 0.5f, 0.5f, 0.5f, 1.0 };
 	GLfloat blueLight[] = { .1f,.1f,.3f,1.0 };
@@ -410,10 +413,10 @@ void TrainView::draw()
 	glUseProgram(0);
 
 	glEnable(GL_LIGHTING);
-	draw_ground();
 	setupFloor();
 	//glDisable(GL_LIGHTING);
 	//drawFloor(1600, 50);
+	draw_ground();
 
 
 	// now draw the object and we need to do it twice
@@ -423,6 +426,7 @@ void TrainView::draw()
 	update_arcLengh();
 
 	drawStuff();
+
 
 	// this time drawing is for shadows (except for top view)
 	if (!tw->topCam->value()) {
@@ -508,7 +512,7 @@ setProjection()
 			center = trans * center;
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
-			gluPerspective(120, 1, 1, 200);
+			gluPerspective(120, 1, 1, 1000);
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
 			gluLookAt(
@@ -531,7 +535,7 @@ setProjection()
 			center = trans * center;
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
-			gluPerspective(120, 1, 1, 200);
+			gluPerspective(120, 1, 1, 1000);
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
 			gluLookAt(
@@ -1000,11 +1004,11 @@ void TrainView::draw_sleeper(bool doingShadows) {
 
 void TrainView::draw_ground() {
 	float scale_value = 50.0f;
-	unsigned int r = 150;
-	unsigned int g = 150;
+	unsigned int r = 50;
+	unsigned int g = 255;
 	unsigned int b = 150;
 	glPushMatrix();
-	glTranslated(0, -100.0, 0);
+	glTranslated(0, -200.0, 0);
 	glScalef(scale_value, scale_value, scale_value);
 	glColor3ub(r, g, b);
 
@@ -1037,6 +1041,24 @@ void TrainView::draw_env_model(bool doingShadows) {
 
 		glm::vec4 vec(env_models[0].vertices[i].x, env_models[0].vertices[i].y, env_models[0].vertices[i].z, 1.0f);
 		glNormal3d(env_models[0].normals[i].x, env_models[0].normals[i].y, env_models[0].normals[i].z);
+		glVertex3f(vec.x, vec.y, vec.z);
+
+	}
+	glEnd();
+	glPopMatrix();
+
+	scale_value = 1.0f;
+	glPushMatrix();
+	glTranslated(10, 0.0, 0);
+	glScalef(scale_value, scale_value, scale_value);
+	if (!doingShadows) {
+		glColor3ub(r, g, b);
+	}
+	glBegin(GL_TRIANGLES);
+	for (int i = 0; i < env_models[1].vertices.size(); ++i) {
+
+		glm::vec4 vec(env_models[1].vertices[i].x, env_models[1].vertices[i].y, env_models[1].vertices[i].z, 1.0f);
+		glNormal3d(env_models[1].normals[i].x, env_models[1].normals[i].y, env_models[1].normals[i].z);
 		glVertex3f(vec.x, vec.y, vec.z);
 
 	}

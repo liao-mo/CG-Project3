@@ -238,6 +238,8 @@ int TrainView::handle(int event)
 		break;
 	}
 
+	//update arc length data
+	update_arcLengh();
 	return Fl_Gl_Window::handle(event);
 }
 
@@ -365,7 +367,7 @@ void TrainView::draw()
 	// once for real, and then once for shadows
 	glEnable(GL_LIGHTING);
 	setupObjects();
-	update_arcLengh();
+	
 
 	drawStuff();
 
@@ -1096,6 +1098,7 @@ void TrainView::update_arcLengh() {
 	t_param.assign(size, 0);
 	arc_length.assign(size, 0);
 	accumulate_length.assign(size, 0);
+	speeds.assign(size, 0);
 	all_qt.assign(size, default_vec3);
 	all_orient.assign(size, default_vec3);
 	all_forward.assign(size, default_vec3);
@@ -1106,7 +1109,7 @@ void TrainView::update_arcLengh() {
 		t_param[i] = float(fraction) / float(DIVIDE_LINE);
 	}
 
-	//setup arcLength
+	//setup arcLength and all qt, orient and forward
 	for (int i = 0; i < m_pTrack->points.size(); ++i) {
 		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
 		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
@@ -1139,6 +1142,27 @@ void TrainView::update_arcLengh() {
 			all_forward[current_index] = forward;
 		}
 	}
+
+	//setup speeds
+	float total_energy = 2000.0f;
+	float kinetic_energy = 2000.0f;
+	float potential_energy = 0.0f;
+	float h_coefficient = 20.0f;
+	float current_h = all_qt[0].y;
+	speeds[0] = 0.05 * sqrt(kinetic_energy);
+	for (int i = 1; i < size; ++i) {
+		float h_diff = all_qt[i].y - all_qt[i - 1].y;
+		potential_energy = potential_energy + h_coefficient * h_diff;
+		kinetic_energy = total_energy - potential_energy;
+		if (kinetic_energy <= 50) {
+			total_energy += 50.0f;
+			kinetic_energy = 50.0f;
+		} 
+		//cout << "p: " << potential_energy << endl;
+		float current_speed = 0.05* sqrt(kinetic_energy);
+		speeds[i] = current_speed;
+	}
+
 }
 
 

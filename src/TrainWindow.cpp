@@ -187,7 +187,12 @@ TrainWindow(const int x, const int y)
 		pty += 100;
 
 		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
-		togglify(envLight, 1);
+		togglify(envLight, 1);		
+
+		pty += 30;
+
+		physics = new Fl_Button(605, pty, 100, 20, "Physics");
+		togglify(physics, 1);
 
 		pty += 30;
 
@@ -256,7 +261,14 @@ advanceTrain(float dir)
 	//#####################################################################
 	float speed_val0 = dir * this->speed->value() / 100.0;
 	float speed_val1 = dir * this->speed->value() ;
+
+	if (physics->value() == 1) {
+		size_t i;
+		i = trainView->C_length_index();
+		speed_val1 = speed_val1 * trainView->speeds[i];
+	}
 #ifdef DEBUG
+	//cout << "s: " << speed_val1 << endl;
 	//speed_val = 0.001;
 #endif // DEBUG
 

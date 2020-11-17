@@ -171,8 +171,10 @@ class TrainView : public Fl_Gl_Window
 		std::vector<float> t_param;
 		std::vector<float> arc_length;
 		std::vector<float> accumulate_length;
+		std::vector<float> speeds;
 		std::vector<glm::vec3> all_qt;
 		std::vector<glm::vec3> all_orient;
 		std::vector<glm::vec3> all_forward;
+
 };
 

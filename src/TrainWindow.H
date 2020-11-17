@@ -94,6 +94,7 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Value_Slider*	speed;
 		Fl_Button*			arcLength;		// do we use arc length for speed?
 		Fl_Button* envLight; // do we want environment lighting?
+		Fl_Button* physics; // do we want physics?
 
 
 		// add a car

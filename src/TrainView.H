@@ -55,7 +55,7 @@ class CTrack;
 #include "TrainModel.h"
 #include <vector>
 #include <chrono>
-#include <ctime>   
+#include <ctime>
 
 // Include GLM
 #include <glm/glm.hpp>

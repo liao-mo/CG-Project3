@@ -163,7 +163,6 @@ TrainWindow(const int x, const int y)
 		pty+=30;
 
 		// browser to select spline types
-		// TODO: make sure these choices are the same as what the code supports
 		lightBrowser = new Fl_Browser(605, pty, 120, 75, "light Type");
 		lightBrowser->type(2);		// select
 		lightBrowser->callback((Fl_Callback*)damageCB, this);
@@ -174,8 +173,7 @@ TrainWindow(const int x, const int y)
 
 		pty += 110;
 
-		// browser to select spline types
-		// TODO: make sure these choices are the same as what the code supports
+		// browser to select track types
 		trackBrowser = new Fl_Browser(605, pty, 120, 75, "track Type");
 		trackBrowser->type(2);		// select
 		trackBrowser->callback((Fl_Callback*)damageCB, this);

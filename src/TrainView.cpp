@@ -1,29 +1,3 @@
-/************************************************************************
-	 File:        TrainView.cpp
-
-	 Author:
-				  Michael Gleicher, gleicher@cs.wisc.edu
-
-	 Modifier
-				  Yu-Chi Lai, yu-chi@cs.wisc.edu
-
-	 Comment:
-						The TrainView is the window that actually shows the
-						train. Its a
-						GL display canvas (Fl_Gl_Window).  It is held within
-						a TrainWindow
-						that is the outer window with all the widgets.
-						The TrainView needs
-						to be aware of the window - since it might need to
-						check the widgets to see how to draw
-
-	  Note:        we need to have pointers to this, but maybe not know
-						about it (beware circular references)
-
-	 Platform:    Visio Studio.Net 2003/2005
-
-*************************************************************************/
-
 #include <iostream>
 #include <Fl/fl.h>
 
@@ -35,7 +9,6 @@
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -65,57 +38,7 @@ using namespace std;
 #define DEBUG
 
 
-//find 4 control point around current point
-std::vector<Pnt3f> TrainView::find_Cpoints(int currentPoint) {
-#ifdef DEBUG
-	
-#endif // DEBUG
 
-	Pnt3f cp_pos_p0;
-	if (currentPoint == 0) {
-		cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
-		//cout << "cp0: " << m_pTrack->points.size() - 1;
-	}
-	else {
-		cp_pos_p0 = m_pTrack->points[(currentPoint - 1)].pos;
-		//cout << "cp0: " << currentPoint - 1;
-	}
-	Pnt3f cp_pos_p1 = m_pTrack->points[currentPoint].pos;
-	//cout << " cp1: " << currentPoint;
-	Pnt3f cp_pos_p2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].pos;
-	//cout << " cp2: " << (currentPoint + 1) % m_pTrack->points.size();
-	Pnt3f cp_pos_p3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].pos;
-	//cout << " cp3: " << (currentPoint + 2) % m_pTrack->points.size();
-	//cout << endl;
-
-	
-
-	std::vector<Pnt3f> output = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
-	return output;
-
-}
-
-//find 4 orient vector around current point
-std::vector<Pnt3f> TrainView::find_orient_vectors(int currentPoint) {
-#ifdef DEBUG
-
-#endif // DEBUG
-
-	Pnt3f orient0;
-	if (currentPoint == 0) {
-		orient0 = m_pTrack->points[(m_pTrack->points.size() - 1)].orient;
-	}
-	else {
-		orient0 = m_pTrack->points[(currentPoint - 1)].orient;
-	}
-	Pnt3f orient1 = m_pTrack->points[currentPoint].orient;
-	Pnt3f orient2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].orient;
-	Pnt3f orient3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].orient;
-
-	std::vector<Pnt3f> output = { orient0, orient1, orient2, orient3 };
-	return output;
-
-}
 
 // * Constructor to set up the GL window
 TrainView::
@@ -288,8 +211,6 @@ void TrainView::draw()
 	if (tw->envLight->value() == 1) 	glEnable(GL_LIGHT0);
 	else 	glDisable(GL_LIGHT0);
 
-
-
 	// top view only needs one light
 	if (tw->topCam->value()) {
 		glDisable(GL_LIGHT1);
@@ -444,11 +365,6 @@ setProjection()
 		glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
 		glm::mat4 trans = glm::mat4(1.0f);
 
-		
-#ifdef DEBUG
-
-		
-#endif // DEBUG
 		if (tw->FPV->value() == 1) {
 			trans = glm::translate(trans, FPV_up_value * offset0);
 			eye = trans * eye;
@@ -798,39 +714,26 @@ void TrainView::draw_track(bool doingShadows) {
 			glm::mat4 scale = glm::mat4(1.0f);
 			scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
 
-			quat MyQuaternion = my_LookAt(forward, orient_t0_v);
-
-			mat4 RotationMatrix = glm::toMat4(MyQuaternion);
-			float rotateArray[16] = { 0.0 };
-			const float* pSource = (const float*)glm::value_ptr(RotationMatrix);
-			for (int i = 0; i < 16; ++i)
-				rotateArray[i] = pSource[i];
 
 			mat4 rotate = glm::inverse(glm::lookAt(
 				qt0_v,
 				qt1_v,
 				orient_t0_v));
-			float rotateArray2[16] = { 0.0 };
-			const float* pSource2 = (const float*)glm::value_ptr(rotate);
+			float rotateArray[16] = { 0.0 };
+			const float* pSource = (const float*)glm::value_ptr(rotate);
 			for (int i = 0; i < 16; ++i)
-				rotateArray2[i] = pSource2[i];
+				rotateArray[i] = pSource[i];
 
 			float up_offset = -0.3f;
 			glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
 			side_offset_v = glm::normalize(side_offset_v);
 			side_offset_v *= 1.5f;
 
-			//glm::mat4 trans = glm::mat4(1.0f);
-			//trans = glm::translate(trans, qt0_v);
-			//trans = glm::translate(trans, up_offset * orient_t0_v);
-			//trans = glm::translate(trans, side_offset_v*1.0f);
-
-
 			glPushMatrix();
 			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
 			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
 			//glTranslated(side_offset_v.x, side_offset_v.y,side_offset_v.z);
-			glMultMatrixf(rotateArray2);
+			glMultMatrixf(rotateArray);
 			glRotatef(90.0f, 0, 1, 0);
 			glScalef(scale_value, scale_value, scale_value);
 
@@ -850,16 +753,9 @@ void TrainView::draw_track(bool doingShadows) {
 				glVertex3f(vec.x, vec.y, vec.z);
 
 			}
-
-
-
-
-
-
 			glEnd();
 			glPopMatrix();
 		}
-
 		glLineWidth(1);
 	}
 }
@@ -917,7 +813,6 @@ void TrainView::draw_sleeper(bool doingShadows) {
 			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
 			float up_offset = -1.5f;
 			glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-			//glMultMatrixf(rotateArray);
 			glMultMatrixf(rotateArray2);
 			glRotatef(90.0f, 0, 1, 0);
 			glScalef(scale_value, scale_value, scale_value);
@@ -1165,8 +1060,6 @@ void TrainView::update_arcLengh() {
 
 }
 
-
-
 //use current length to find parameter t
 float TrainView::length_to_t(float length) {
 	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
@@ -1230,4 +1123,56 @@ void TrainView::match_length() {
 void TrainView::match_trainU() {
 	int index = trainU_index();
 	m_pTrack->C_length = accumulate_length[index];
+}
+
+//find 4 control point around current point
+std::vector<Pnt3f> TrainView::find_Cpoints(int currentPoint) {
+#ifdef DEBUG
+
+#endif // DEBUG
+
+	Pnt3f cp_pos_p0;
+	if (currentPoint == 0) {
+		cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
+		//cout << "cp0: " << m_pTrack->points.size() - 1;
+	}
+	else {
+		cp_pos_p0 = m_pTrack->points[(currentPoint - 1)].pos;
+		//cout << "cp0: " << currentPoint - 1;
+	}
+	Pnt3f cp_pos_p1 = m_pTrack->points[currentPoint].pos;
+	//cout << " cp1: " << currentPoint;
+	Pnt3f cp_pos_p2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].pos;
+	//cout << " cp2: " << (currentPoint + 1) % m_pTrack->points.size();
+	Pnt3f cp_pos_p3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].pos;
+	//cout << " cp3: " << (currentPoint + 2) % m_pTrack->points.size();
+	//cout << endl;
+
+
+
+	std::vector<Pnt3f> output = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
+	return output;
+
+}
+
+//find 4 orient vector around current point
+std::vector<Pnt3f> TrainView::find_orient_vectors(int currentPoint) {
+#ifdef DEBUG
+
+#endif // DEBUG
+
+	Pnt3f orient0;
+	if (currentPoint == 0) {
+		orient0 = m_pTrack->points[(m_pTrack->points.size() - 1)].orient;
+	}
+	else {
+		orient0 = m_pTrack->points[(currentPoint - 1)].orient;
+	}
+	Pnt3f orient1 = m_pTrack->points[currentPoint].orient;
+	Pnt3f orient2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].orient;
+	Pnt3f orient3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].orient;
+
+	std::vector<Pnt3f> output = { orient0, orient1, orient2, orient3 };
+	return output;
+
 }

@@ -1,30 +1,3 @@
-/************************************************************************
-     File:        TrainWindow.H
-
-     Author:     
-                  Michael Gleicher, gleicher@cs.wisc.edu
-
-     Modifier
-                  Yu-Chi Lai, yu-chi@cs.wisc.edu
-     
-     Comment:     
-						this class defines the window in which the project 
-						runs - its the outer windows that contain all of 
-						the widgets, including the "TrainView" which has the 
-						actual OpenGL window in which the train is drawn
-
-						You might want to modify this class to add new widgets
-						for controlling	your train
-
-						This takes care of lots of things - including installing 
-						itself into the FlTk "idle" loop so that we get periodic 
-						updates (if we're running the train).
-
-
-     Platform:    Visio Studio.Net 2003/2005
-
-*************************************************************************/
-
 #include <FL/fl.h>
 #include <FL/Fl_Box.h>
 
@@ -202,9 +175,6 @@ TrainWindow(const int x, const int y)
 		delete_car->callback((Fl_Callback*)delCar, this);
 
 		// TODO: add widgets for all of your fancier features here
-#ifdef EXAMPLE_SOLUTION
-		makeExampleWidgets(this,pty);
-#endif
 
 		// we need to make a little phantom widget to have things resize correctly
 		Fl_Box* resizebox = new Fl_Box(600,595,200,5);
@@ -265,10 +235,6 @@ advanceTrain(float dir)
 		i = trainView->C_length_index();
 		speed_val1 = speed_val1 * trainView->speeds[i];
 	}
-#ifdef DEBUG
-	//cout << "s: " << speed_val1 << endl;
-	//speed_val = 0.001;
-#endif // DEBUG
 
 	if (arcLength->value() == 1) {
 		trainView->m_pTrack->C_length += speed_val1;
@@ -287,21 +253,4 @@ advanceTrain(float dir)
 	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size() - 0.01) {
 		trainView->m_pTrack->trainU = 0;
 	}
-
-
-#ifdef EXAMPLE_SOLUTION
-	// note - we give a little bit more example code here than normal,
-	// so you can see how this works
-
-	if (arcLength->value()) {
-		float vel = ew.physics->value() ? physicsSpeed(this) : dir * (float)speed->value();
-		world.trainU += arclenVtoV(world.trainU, vel, this);
-	} else {
-		world.trainU +=  dir * ((float)speed->value() * .1f);
-	}
-
-	float nct = static_cast<float>(world.points.size());
-	if (world.trainU > nct) world.trainU -= nct;
-	if (world.trainU < 0) world.trainU += nct;
-#endif
 }
